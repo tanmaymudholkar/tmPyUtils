@@ -17,6 +17,8 @@ commandToCall = pathToClient + " -query \"" + "file, lumi dataset={dataset} run=
 os.system(commandToCall)
 jsonFormattedQueryResult = open(tempFileFullPath)
 deserializedQueryResult = json.load(jsonFormattedQueryResult)
+jsonFormattedQueryResult.close()
+os.system("rm " + tempFileFullPath)
 
 datafilesWithLumisectionsList = [[deserializedQueryResult[i]['lumi'][0]['number'], deserializedQueryResult[i]['file'][0]['name']] for i in range(len(deserializedQueryResult))]
 
@@ -31,5 +33,3 @@ for sortedLumiNumber in sorted(datafilesWithFirstLumisectionDict.keys()):
 outputFile = open(inputArguments.outputFile, 'w')
 outputFile.write(datafilesString)
 outputFile.close()
-
-os.system("rm " + tempFileFullPath)
