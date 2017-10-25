@@ -11,6 +11,10 @@ class tmProgressBar:
     def __init__(self, counterMaxValue = 0):
         self.startTime = 0.
         self.counterMaxValue = counterMaxValue
+        self.formatString = ""
+        if counterMaxValue > 0:
+            nDigitsCounterMax = len(str(counterMaxValue))
+            self.formatString = "{n}d".format(n=nDigitsCounterMax)
 
     def initializeTimer(self):
         self.startTime = time.time()
@@ -30,7 +34,11 @@ class tmProgressBar:
         guess_timeRemainingMinutesFloat = math.floor((guess_timeRemaining - 3600.*guess_timeRemainingHoursFloat)/60.)
         guess_timeRemainingMinutes = toInt(guess_timeRemainingMinutesFloat)
         guess_timeRemainingSeconds = guess_timeRemaining - 3600.*guess_timeRemainingHoursFloat - 60.*guess_timeRemainingMinutesFloat
-        statusBuffer = '\r    [' + '#'*percentCompleted + '-'*(100-percentCompleted) + "]   %d"%(percentCompleted) + "% done. ETA: " + "%02d h, %02d m, %.1f s"%(guess_timeRemainingHours, guess_timeRemainingMinutes, guess_timeRemainingSeconds) + "."
-        if (self.counterMaxValue > 0): statusBuffer += " Completed: %d/%d"%(counterCurrentValue, self.counterMaxValue)
+        statusBuffer = '\r    [' + '#'*percentCompleted + '-'*(100-percentCompleted) + ("]   {pC:3d} % done. ETA: {hours:2d} h: {minutes:2d} m: {seconds:>04.1f} s.").format(pC=percentCompleted, hours=guess_timeRemainingHours, minutes=guess_timeRemainingMinutes, seconds=guess_timeRemainingSeconds)
+        if (self.counterMaxValue > 0): statusBuffer += (" Completed: {currentValue:" + self.formatString + "}/{maxValue:" + self.formatString + "}.").format(currentValue=counterCurrentValue, maxValue=self.counterMaxValue)
         sys.stdout.write(statusBuffer)
         sys.stdout.flush()
+
+    def terminate(self):
+        # self.updateBar(1., self.counterMaxValue) # Commented to catch potential bugs with loop exiting before expected end. Side-effect of the commenting is that it makes the bar uglier in the output...
+        print("")
