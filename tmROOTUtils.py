@@ -14,11 +14,18 @@ def addInputFilesToTree(inputTree, listOfFilesToAdd):
     print ("Finished adding input files to tree.")
 
 def getMaxValueFromListOfHistograms(listOfInputHistograms):
-    runningMaxValue = -1.
+    runningMaxValue = 0.
     for inputHistogram in listOfInputHistograms:
-        currentMaxValue = inputHistogram.GetMaximum()
-        if (currentMaxValue > runningMaxValue): runningMaxValue = currentMaxValue
+        currentMaxValue = inputHistogram.GetBinContent(inputHistogram.GetMaximumBin())
+        if (runningMaxValue == 0. or currentMaxValue > runningMaxValue): runningMaxValue = currentMaxValue
     return runningMaxValue
+
+def getMinValueFromListOfHistograms(listOfInputHistograms):
+    runningMinValue = 0.
+    for inputHistogram in listOfInputHistograms:
+        currentMinValue = inputHistogram.GetBinContent(inputHistogram.GetMinimumBin())
+        if (runningMinValue == 0. or currentMinValue < runningMinValue): runningMinValue = currentMinValue
+    return runningMinValue
 
 def setYRangesToListMax(listOfInputHistograms):
     maximumValue = getMaxValueFromListOfHistograms(listOfInputHistograms)
