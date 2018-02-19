@@ -111,3 +111,17 @@ def extractTH2Contents(inputTH2, outputFileName, columnTitles=None, quantityName
         xBinCounter += 1
     outputFile.close()
     print("Histogram contents saved to file %s"%(outputFileName))
+
+def plotObjectsOnCanvas(listOfObjects=None, canvasName="", outputROOTFile=None, outputDocumentName="", outputDocumentExtension="png", canvas_xPixels=1024, canvas_yPixels=768):
+    if (listOfObjects is None): sys.exit("Error in plotObjectsOnCanvas: no object found in listOfObjects.")
+    if (canvasName == ""): sys.exit("Error in plotObjectsOnCanvas: No name specified for canvas.")
+    if ((outputROOTFile is None) and (outputDocumentName == "")): sys.exit("Error in plotObjectsOnCanvas: Neither output ROOT file nor output document name specified.")
+    canvas = ROOT.TCanvas(canvasName, canvasName, canvas_xPixels, canvas_yPixels)
+    canvas.SetBorderSize(0)
+    canvas.SetFrameBorderMode(0)
+    listOfObjects[0].Draw()
+    # Rest of objects need to be drawn with option "same"
+    for objectCounter in range(1, len(listOfObjects)): listOfObjects[objectCounter].Draw("same")
+    if not(outputDocumentName == ""): canvas.SaveAs("{outputDocumentName}.{outputDocumentExtension}".format(outputDocumentName=outputDocumentName, outputDocumentExtension=outputDocumentExtension))
+    if not(outputROOTFile is None): outputROOTFile.WriteTObject(canvas)
+    return canvas
