@@ -125,3 +125,7 @@ def plotObjectsOnCanvas(listOfObjects=None, canvasName="", outputROOTFile=None, 
     if not(outputDocumentName == ""): canvas.SaveAs("{outputDocumentName}.{outputDocumentExtension}".format(outputDocumentName=outputDocumentName, outputDocumentExtension=outputDocumentExtension))
     if not(outputROOTFile is None): outputROOTFile.WriteTObject(canvas)
     return canvas
+
+def getNEventsInNamedRangeInRooDataSet(inputRooDataSet, rangeName):
+    reducedRooDataSet = inputRooDataSet.reduce(ROOT.RooFit.CutRange(rangeName), ROOT.RooFit.Name(inputRooDataSet.GetName() + "_reduced"), ROOT.RooFit.Title(inputRooDataSet.GetTitle() + "_reduced"))
+    return (reducedRooDataSet.numEntries())
