@@ -5,6 +5,7 @@ import ROOT
 import os, sys, math
 
 ZERO_TOLERANCE = 0.000001
+ONE_SIGMA_GAUSS = 0.682689492
 
 def addInputFilesToTree(inputTree, listOfFilesToAdd):
     print ("Adding input files to tree...")
@@ -129,3 +130,12 @@ def plotObjectsOnCanvas(listOfObjects=None, canvasName="", outputROOTFile=None, 
 def getNEventsInNamedRangeInRooDataSet(inputRooDataSet, rangeName):
     reducedRooDataSet = inputRooDataSet.reduce(ROOT.RooFit.CutRange(rangeName), ROOT.RooFit.Name(inputRooDataSet.GetName() + "_reduced"), ROOT.RooFit.Title(inputRooDataSet.GetTitle() + "_reduced"))
     return (reducedRooDataSet.numEntries())
+
+def getPoissonConfidenceInterval(confidenceLevel = ONE_SIGMA_GAUSS, observedNEvents = 0):
+    # Copied from TH1 source code: https://github.com/root-project/root/blob/master/hist/hist/src/TH1.cxx
+    alpha = 1. - confidenceLevel
+    lowerLimit = 0.
+    if observedNEvents > 0: lowerLimit = ROOT.Math.gamma_quantile((alpha/2.), observedNEvents, 1.)
+    upperLimit = ROOT.Math.gamma_quantile_c((alpha/2.), 1+observedNEvents, 1.)
+    outputDict = {"lower": lowerLimit, "upper": upperLimit}
+    return outputDict
