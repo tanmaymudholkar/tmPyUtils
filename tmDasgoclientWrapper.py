@@ -10,7 +10,13 @@ parser.add_argument('--runNumber', action='store', help='Run number', type=int, 
 parser.add_argument('--outputFile', action='store', help='Name of output file to which to write the list of root files', type=str, required=True)
 inputArguments = parser.parse_args()
 
-pathToClient = "/afs/cern.ch/user/t/tmudholk/public/research/dasgoclient/dasgoclient_linux"
+backupPath = "/afs/cern.ch/user/t/tmudholk/public/research/dasgoclient/dasgoclient_linux"
+pathToClient = ""
+if (os.getenv("CMSSW_BASE") is None):
+    print("WARNING: CMSSW_BASE not set, reverting to default client: " + backupPath)
+    pathToClient = backupPath
+else: pathToClient = "dasgoclient" # Should already be somewhere in $PATH if cms environment has been sourced
+
 tempFileFullPath = "/tmp/tmudholk/query_result.jsn"
 
 commandToCall = pathToClient + " -query \"" + "file, lumi dataset={dataset} run={run}".format(dataset=inputArguments.dataset, run=inputArguments.runNumber) + "\" -json > {tmpPath}".format(tmpPath=tempFileFullPath)
