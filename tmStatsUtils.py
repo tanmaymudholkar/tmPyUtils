@@ -19,6 +19,7 @@ def getMonotonicFunctionApproximateZero(inputFunction=None, xRange=None, zeroTol
     if (fmin == fmax): raise ValueError("Error in tmStatsUtils.getZeros(): Given function has same value {val} at either endpoint of the range {xR}".format(xR=xRange, val=fmin))
     xmid = (xmin + xmax)/2.
     fmid = inputFunction(xmid)
+    if printDebug: print("Value of called function at (rangeMin={rmin}, rangeMid={rmid}, rangeMax={rmax}): ({fmin}, {fmid}, {fmax})".format(rmin=xmin, rmid=xmid, rmax=xmax, fmin=fmin, fmid=fmid, fmax=fmax))
     monotonicity1 = (fmid > fmin)
     monotonicity2 = (fmax > fmid)
     if (monotonicity1^monotonicity2): # monotonicity1^monotonicity2 is True iff exactly one of them is True
