@@ -107,7 +107,7 @@ def extractTH2Contents(inputTH2, outputFileName, columnTitles=None, quantityName
             histContent = inputTH2.GetBinContent(globalBinNumber)
             lineToOutput = lineToOutputPrefix + ("%s    %s\n"%(formatSpecifiers[1], formatSpecifiers[2]))%(yBinCenterValue, histContent)
             if (printRangeY): lineToOutput = lineToOutputPrefix + ("%s    %s    %s\n"%(formatSpecifiers[1], formatSpecifiers[1], formatSpecifiers[2]))%(yBinLowEdge, yBinUpEdge, histContent)
-            if (histContent > ZERO_TOLERANCE): outputFile.write(lineToOutput)
+            if (not(onlyOutputNonzero) or (histContent > ZERO_TOLERANCE)): outputFile.write(lineToOutput)
             yBinCounter += 1
         xBinCounter += 1
     outputFile.close()
