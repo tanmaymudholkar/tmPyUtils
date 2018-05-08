@@ -68,6 +68,7 @@ def getSumOfBinContents(inputTH1):
     return sumBinContents
 
 def extractTH2Contents(inputTH2, outputFileName, columnTitles=None, quantityName=None, includeOverflow=False, formatSpecifiers=None, onlyOutputNonzero=True, printRangeX=False, printRangeY=False):
+    zeroTolerance = 0.000001*inputTH2.GetBinContent(inputTH2.GetMaximumBin())
     print("Extracting info from histogram...")
     outputFile = open(outputFileName, 'w')
     xAxis = inputTH2.GetXaxis()
@@ -107,7 +108,7 @@ def extractTH2Contents(inputTH2, outputFileName, columnTitles=None, quantityName
             histContent = inputTH2.GetBinContent(globalBinNumber)
             lineToOutput = lineToOutputPrefix + ("%s    %s\n"%(formatSpecifiers[1], formatSpecifiers[2]))%(yBinCenterValue, histContent)
             if (printRangeY): lineToOutput = lineToOutputPrefix + ("%s    %s    %s\n"%(formatSpecifiers[1], formatSpecifiers[1], formatSpecifiers[2]))%(yBinLowEdge, yBinUpEdge, histContent)
-            if (not(onlyOutputNonzero) or (histContent > ZERO_TOLERANCE)): outputFile.write(lineToOutput)
+            if (not(onlyOutputNonzero) or (histContent > zeroTolerance)): outputFile.write(lineToOutput)
             yBinCounter += 1
         xBinCounter += 1
     outputFile.close()
