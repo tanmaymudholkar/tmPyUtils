@@ -4,7 +4,6 @@ import ROOT
 
 import os, sys, math
 
-ZERO_TOLERANCE = 0.000001
 ONE_SIGMA_GAUSS = 0.682689492
 
 def addInputFilesToTree(inputTree, listOfFilesToAdd):
@@ -127,8 +126,11 @@ def plotObjectsOnCanvas(listOfObjects=None, canvasName="", outputROOTFile=None, 
     if enableLogY: ROOT.gPad.SetLogy()
     if enableLogZ: ROOT.gPad.SetLogz()
     listOfObjects[0].Draw(customPlotOptions_firstObject)
+    if not(outputROOTFile is None): outputROOTFile.WriteTObject(listOfObjects[0])
     # Rest of objects need to be drawn with option "same"
-    for objectCounter in range(1, len(listOfObjects)): listOfObjects[objectCounter].Draw("same")
+    for objectCounter in range(1, len(listOfObjects)):
+        listOfObjects[objectCounter].Draw("same")
+        if not(outputROOTFile is None): outputROOTFile.WriteTObject(listOfObjects[objectCounter])
     if not(outputDocumentName == ""): canvas.SaveAs("{outputDocumentName}.{outputDocumentExtension}".format(outputDocumentName=outputDocumentName, outputDocumentExtension=outputDocumentExtension))
     if not(outputROOTFile is None): outputROOTFile.WriteTObject(canvas)
     return canvas
