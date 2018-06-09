@@ -135,6 +135,28 @@ def plotObjectsOnCanvas(listOfObjects=None, canvasName="", outputROOTFile=None, 
     if not(outputROOTFile is None): outputROOTFile.WriteTObject(canvas)
     return canvas
 
+def get2DHistogramContentAndErrorAtCoordinates(inputTH2=None, xValue=None, yValue=None, haveStrictRangeChecks=True):
+    if (inputTH2 is None): sys.exit("The named variable inputTH2 points to None.")
+    if (xValue is None or yValue is None): sys.exit("Both xValue and yValue need to be specified.")
+    nBinsX = inputTH2.GetXaxis().GetNbins()
+    nBinsY = inputTH2.GetYaxis().GetNbins()
+    insideRange = True
+    xBin = inputTH2.GetXaxis().FindFixBin(xValue)
+    if (xBin == 0 or xBin == 1+nBinsX): insideRange = False
+    yBin = inputTH2.GetYaxis().FindFixBin(yValue)
+    if (yBin == 0 or yBin == 1+nBinsY): insideRange = False
+    if (haveStrictRangeChecks and not(insideRange)):
+        axes_xMin = inputTH2.GetXaxis().GetXmin()
+        axes_xMax = inputTH2.GetXaxis().GetXmax()
+        axes_yMin = inputTH2.GetYaxis().GetXmin() # "xmin" is a confusing name
+        axes_yMax = inputTH2.GetYaxis().GetXmax() # "xmax" is a confusing name
+        sys.exit("Given coordinates: ({xval}, {yval}) are not inside the 2D range of the input TH2 axes: ({xmin}, {ymin}) ---> ({xmax}, {ymax})".format(xval=xValue, yval=yValue, xmin=axes_xMin, ymin=axes_yMin, xmax=axes_xMax, ymax=axes_yMax))
+    globalBinIndex = inputTH2.GetBin(xBin, yBin)
+    binContent = inputTH2.GetBinContent(globalBinIndex)
+    binError = inputTH2.GetBinError(globalBinIndex)
+    outputDict = {"content": binContent, "error": binError}
+    return outputDict
+
 def getNEventsInNamedRangeInRooDataSet(inputRooDataSet, rangeName):
     reducedRooDataSet = inputRooDataSet.reduce(ROOT.RooFit.CutRange(rangeName), ROOT.RooFit.Name(inputRooDataSet.GetName() + "_reduced"), ROOT.RooFit.Title(inputRooDataSet.GetTitle() + "_reduced"))
     return (reducedRooDataSet.numEntries())
