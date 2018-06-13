@@ -113,7 +113,7 @@ def extractTH2Contents(inputTH2, outputFileName, columnTitles=None, quantityName
     outputFile.close()
     print("Histogram contents saved to file %s"%(outputFileName))
 
-def plotObjectsOnCanvas(listOfObjects=None, canvasName="", outputROOTFile=None, outputDocumentName="", outputDocumentExtension="png", canvas_xPixels=1024, canvas_yPixels=768, customOptStat=None, customTextFormat=None, customPlotOptions_firstObject="", enableLogX = False, enableLogY = False, enableLogZ = False):
+def plotObjectsOnCanvas(listOfObjects=None, canvasName="", outputROOTFile=None, outputDocumentName="", outputDocumentExtension="png", canvas_xPixels=1024, canvas_yPixels=768, customOptStat=None, customTextFormat=None, customPlotOptions_firstObject="", enableLogX = False, enableLogY = False, enableLogZ = False, customXRange=None, customYRange=None, customZRange=None):
     if (listOfObjects is None): sys.exit("Error in plotObjectsOnCanvas: no object found in listOfObjects.")
     if (canvasName == ""): sys.exit("Error in plotObjectsOnCanvas: No name specified for canvas.")
     if ((outputROOTFile is None) and (outputDocumentName == "")): sys.exit("Error in plotObjectsOnCanvas: Neither output ROOT file nor output document name specified.")
@@ -126,6 +126,9 @@ def plotObjectsOnCanvas(listOfObjects=None, canvasName="", outputROOTFile=None, 
     if enableLogY: ROOT.gPad.SetLogy()
     if enableLogZ: ROOT.gPad.SetLogz()
     listOfObjects[0].Draw(customPlotOptions_firstObject)
+    if not(customXRange is None): listOfObjects[0].GetXaxis().SetRangeUser(customXRange[0], customXRange[1])
+    if not(customYRange is None): listOfObjects[0].GetYaxis().SetRangeUser(customYRange[0], customYRange[1])
+    if not(customZRange is None): listOfObjects[0].GetZaxis().SetRangeUser(customZRange[0], customZRange[1])
     if not(outputROOTFile is None): outputROOTFile.WriteTObject(listOfObjects[0])
     # Rest of objects need to be drawn with option "same"
     for objectCounter in range(1, len(listOfObjects)):
