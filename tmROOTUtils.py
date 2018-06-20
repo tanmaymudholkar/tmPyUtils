@@ -125,7 +125,10 @@ def plotObjectsOnCanvas(listOfObjects=None, canvasName="", outputROOTFile=None, 
     if enableLogX: ROOT.gPad.SetLogx()
     if enableLogY: ROOT.gPad.SetLogy()
     if enableLogZ: ROOT.gPad.SetLogz()
+    def printInfo(obj):
+        print("Drawing object with name={n}, title={t}, class={c}".format(n=obj.GetName(), t=obj.GetTitle(), c=obj.ClassName()))
     listOfObjects[0].Draw(customPlotOptions_firstObject)
+    printInfo(listOfObjects[0])
     if not(customXRange is None): listOfObjects[0].GetXaxis().SetRangeUser(customXRange[0], customXRange[1])
     if not(customYRange is None): listOfObjects[0].GetYaxis().SetRangeUser(customYRange[0], customYRange[1])
     if not(customZRange is None): listOfObjects[0].GetZaxis().SetRangeUser(customZRange[0], customZRange[1])
@@ -133,6 +136,7 @@ def plotObjectsOnCanvas(listOfObjects=None, canvasName="", outputROOTFile=None, 
     # Rest of objects need to be drawn with option "same"
     for objectCounter in range(1, len(listOfObjects)):
         listOfObjects[objectCounter].Draw("same")
+        printInfo(listOfObjects[objectCounter])
         if not(outputROOTFile is None): outputROOTFile.WriteTObject(listOfObjects[objectCounter])
     if not(outputDocumentName == ""): canvas.SaveAs("{outputDocumentName}.{outputDocumentExtension}".format(outputDocumentName=outputDocumentName, outputDocumentExtension=outputDocumentExtension))
     if not(outputROOTFile is None): outputROOTFile.WriteTObject(canvas)
