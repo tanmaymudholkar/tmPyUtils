@@ -8,6 +8,8 @@ parser=argparse.ArgumentParser(description = "Wrapper around dasgoclient that wr
 parser.add_argument('--dataset', action='store', help='Name of dataset', type=str, required=True)
 parser.add_argument('--runNumber', action='store', help='Run number', type=int, required=True)
 parser.add_argument('--outputFile', action='store', help='Name of output file to which to write the list of root files', type=str, required=True)
+parser.add_argument('--minLumi', action='store', default=0, help='Start from lumi (remember to pass option to CMSSW cfg file as well)', type=int)
+parser.add_argument('--maxLumi', action='store', default=0, help='End at lumi (remember to pass option to CMSSW cfg as well)', type=int)
 inputArguments = parser.parse_args()
 
 backupPath = "/afs/cern.ch/user/t/tmudholk/public/research/dasgoclient/dasgoclient_linux"
@@ -30,11 +32,14 @@ datafilesWithLumisectionsList = [[deserializedQueryResult[i]['lumi'][0]['number'
 
 datafilesWithFirstLumisectionDict = {}
 for i in range(len(datafilesWithLumisectionsList)):
-    datafilesWithFirstLumisectionDict[min(datafilesWithLumisectionsList[i][0])] = datafilesWithLumisectionsList[i][1]
+    datafilesWithFirstLumisectionDict[min(datafilesWithLumisectionsList[i][0])] = (max(datafilesWithLumisectionsList[i][0]), datafilesWithLumisectionsList[i][1])
 
 datafilesString = ""
 for sortedLumiNumber in sorted(datafilesWithFirstLumisectionDict.keys()):
-    datafilesString += datafilesWithFirstLumisectionDict[sortedLumiNumber] + "\n"
+    if ((inputArguments.minLumi > 0 and inputArguments.maxLumi > 0) and inputArguments.maxLumi >= inputArguments.minLumi):
+        if (sortedLumiNumber > inputArguments.maxLumi): continue
+        elif (datafilesWithFirstLumisectionDict[sortedLumiNumber][0] < inputArguments.minLumi): continue
+    datafilesString += datafilesWithFirstLumisectionDict[sortedLumiNumber][1] + "\n"
 
 outputFile = open(inputArguments.outputFile, 'w')
 outputFile.write(datafilesString)
