@@ -165,8 +165,11 @@ def get2DHistogramContentAndErrorAtCoordinates(inputTH2=None, xValue=None, yValu
     return outputDict
 
 def getNEventsInNamedRangeInRooDataSet(inputRooDataSet, rangeName):
-    reducedRooDataSet = inputRooDataSet.reduce(ROOT.RooFit.CutRange(rangeName), ROOT.RooFit.Name(inputRooDataSet.GetName() + "_reduced"), ROOT.RooFit.Title(inputRooDataSet.GetTitle() + "_reduced"))
-    return (reducedRooDataSet.numEntries())
+    # reducedRooDataSet = inputRooDataSet.reduce(ROOT.RooFit.CutRange(rangeName), ROOT.RooFit.Name(inputRooDataSet.GetName() + "_reduced"), ROOT.RooFit.Title(inputRooDataSet.GetTitle() + "_reduced"))
+    # if (weighted):
+    #     return reducedRooDataSet.sumEntries()
+    # return reducedRooDataSet.numEntries()
+    return inputRooDataSet.sumEntries("1 > 0", rangeName)
 
 def getPoissonConfidenceInterval(confidenceLevel = ONE_SIGMA_GAUSS, observedNEvents = 0):
     # Copied from TH1 source code: https://github.com/root-project/root/blob/master/hist/hist/src/TH1.cxx
