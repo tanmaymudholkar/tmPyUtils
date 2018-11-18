@@ -164,11 +164,10 @@ def get2DHistogramContentAndErrorAtCoordinates(inputTH2=None, xValue=None, yValu
     outputDict = {"content": binContent, "error": binError}
     return outputDict
 
-def getNEventsInNamedRangeInRooDataSet(inputRooDataSet, rangeName):
-    # reducedRooDataSet = inputRooDataSet.reduce(ROOT.RooFit.CutRange(rangeName), ROOT.RooFit.Name(inputRooDataSet.GetName() + "_reduced"), ROOT.RooFit.Title(inputRooDataSet.GetTitle() + "_reduced"))
-    # if (weighted):
-    #     return reducedRooDataSet.sumEntries()
-    # return reducedRooDataSet.numEntries()
+def getNEventsInNamedRangeInRooDataSet(inputRooDataSet, rangeName, forceNumEntries=False): # By default enter "sumEntries" which accounts for the weight, otherwise return "numEntries"
+    if forceNumEntries:
+        reducedRooDataSet = inputRooDataSet.reduce(ROOT.RooFit.CutRange(rangeName), ROOT.RooFit.Name(inputRooDataSet.GetName() + "_reduced"), ROOT.RooFit.Title(inputRooDataSet.GetTitle() + "_reduced"))
+        return reducedRooDataSet.numEntries()
     return inputRooDataSet.sumEntries("1 > 0", rangeName)
 
 def getPoissonConfidenceInterval(confidenceLevel = ONE_SIGMA_GAUSS, observedNEvents = 0):
