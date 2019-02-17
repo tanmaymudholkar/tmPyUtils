@@ -178,3 +178,31 @@ def getPoissonConfidenceInterval(confidenceLevel = ONE_SIGMA_GAUSS, observedNEve
     upperLimit = ROOT.Math.gamma_quantile_c((alpha/2.), 1+observedNEvents, 1.)
     outputDict = {"lower": lowerLimit, "upper": upperLimit}
     return outputDict
+
+def rescale1DHistogramByBinWidth(input1DHistogram = None):
+    if (input1DHistogram == None): sys.exit("option input1DHistogram is not passed or is None.")
+    if (input1DHistogram.InheritsFrom("TH1")):
+        if (input1DHistogram.InheritsFrom("TH2") or input1DHistogram.InheritsFrom("TH3")):
+            sys.exit("Unable to scale 2D or 3D histograms.")
+    else:
+        sys.exit("Input histogram does not inherit from TH1. Class: {c}".format(c=input1DHistogram.ClassName()))
+    inputClone = input1DHistogram.Clone()
+    input1DHistogram.Reset()
+    input1DHistogram.SetBinErrorOption(inputClone.GetBinErrorOption())
+    if(inputClone.GetBinErrorOption() == ROOT.TH1.kPoisson):
+        print("WARNING: trying to rescale histogram with name {n} with Poisson errors: unsure if error bars will work correctly, trying anyway...".format(n=inputClone.GetName()))
+    inputXAxis = inputClone.GetXaxis()
+    for binCounter in range(0, 2+inputXAxis.GetNbins()):
+        binCenter = inputXAxis.GetBinCenter(binCounter)
+        binContent = inputClone.GetBinContent(binCounter)
+        binError = inputClone.GetBinError(binCounter)
+        binWidth = inputXAxis.GetBinWidth(binCounter)
+        if(inputClone.GetBinErrorOption() == ROOT.TH1.kPoisson):
+            if (abs(int(0.5+binContent)-binContent) <= 0.001*binContent): # Because "getBinContent", even on ROOT's TH1I, apparently returns a float
+                for uglyHackCounter in range(0, int(0.5+binContent)):
+                    input1DHistogram.Fill(binCenter, 1.0/binWidth)
+            else:
+                sys.exit("input histogram has Poisson errors but a non-integer number of events {n} in bin {i}. Don't know how to rescale...".format(n=binContent, i=binCounter))
+        else:
+            input1DHistogram.SetBinContent(binCounter, binContent/binWidth)
+            input1DHistogram.SetBinError(binCounter, binError/binWidth)
