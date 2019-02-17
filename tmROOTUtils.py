@@ -180,7 +180,7 @@ def getPoissonConfidenceInterval(confidenceLevel = ONE_SIGMA_GAUSS, observedNEve
     return outputDict
 
 def rescale1DHistogramByBinWidth(input1DHistogram = None):
-    if (input1DHistogram == None): sys.exit("option input1DHistogram is not passed or is None.")
+    if (input1DHistogram is None): sys.exit("option input1DHistogram is not passed or is None.")
     if (input1DHistogram.InheritsFrom("TH1")):
         if (input1DHistogram.InheritsFrom("TH2") or input1DHistogram.InheritsFrom("TH3")):
             sys.exit("Unable to scale 2D or 3D histograms.")
@@ -206,3 +206,24 @@ def rescale1DHistogramByBinWidth(input1DHistogram = None):
         else:
             input1DHistogram.SetBinContent(binCounter, binContent/binWidth)
             input1DHistogram.SetBinError(binCounter, binError/binWidth)
+
+def printHistogramContents(inputHistogram = None):
+    if (inputHistogram is None): sys.exit("option inputHistogram is not passed or is None.")
+    if (inputHistogram.InheritsFrom("TH1")):
+        if (inputHistogram.InheritsFrom("TH2") or inputHistogram.InheritsFrom("TH3")):
+            sys.exit("Printing contents of 2D or 3D histograms not supported for now...")
+    else:
+        sys.exit("Input histogram does not inherit from TH1. Class: {c}".format(c=inputHistogram.ClassName()))
+    print("Printing contents of histogram with name = {n}, title = {t}".format(n=inputHistogram.GetName(), t=inputHistogram.GetTitle()))
+    inputXAxis = inputHistogram.GetXaxis()
+    for binCounter in range(0, 2+inputXAxis.GetNbins()):
+        binEdgeLow = inputXAxis.GetBinLowEdge(binCounter)
+        binEdgeHigh = inputXAxis.GetBinUpEdge(binCounter)
+        binContent = inputHistogram.GetBinContent(binCounter)
+        binError = inputHistogram.GetBinError(binCounter)
+        binErrorLow = binError
+        binErrorHigh = binError
+        if(inputHistogram.GetBinErrorOption() == ROOT.TH1.kPoisson):
+            binErrorLow = inputHistogram.GetBinErrorLow(binCounter)
+            binErrorHigh = inputHistogram.GetBinErrorUp(binCounter)
+        print("Bin index {i}: {l} < var < {h}; content: {c} (- {el} + {eh})".format(i=binCounter, l=binEdgeLow, h=binEdgeHigh, c=binContent, el=binErrorLow, eh=binErrorHigh))
