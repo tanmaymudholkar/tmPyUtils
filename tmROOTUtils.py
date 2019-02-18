@@ -2,9 +2,10 @@ from __future__ import print_function, division
 
 import ROOT
 
-import os, sys, math
+import os, sys, math, array
 
 ONE_SIGMA_GAUSS = 0.682689492
+ZERO_TOLERANCE = 0.000001
 
 def addInputFilesToTree(inputTree, listOfFilesToAdd):
     print ("Adding input files to tree...")
@@ -52,6 +53,46 @@ def getRatioGraph(numeratorHistogram, denominatorHistogram):
         ratioGraph.SetPointError(binNumber-1, xBinWidth, ratioError)
     return ratioGraph
 
+def getGraphOfRatioOfAsymmErrorsGraphToHistogram(numeratorGraph=None, denominatorHistogram=None, outputName="g", outputTitle="", printDebug=False):
+    if ((numeratorGraph is None) or (denominatorHistogram is None)):
+        sys.exit("ERROR: numeratorGraph or denominatorHistogram are either not passed or None.")
+    if not(numeratorGraph.ClassName() == "TGraphAsymmErrors"): sys.exit("ERROR: numeratorGraph is not a TGraphAsymmErrors; its class is {c}".format(c=numeratorGraph.ClassName()))
+    if not(denominatorHistogram.InheritsFrom("TH1")): sys.exit("ERROR: denominatorHistogram does not inherit from TH1; its class is {c}".format(c=denominatorHistogram.ClassName()))
+    nNumeratorPoints = numeratorGraph.GetN()
+    nDenominatorBins = denominatorHistogram.GetXaxis().GetNbins()
+    if not(nNumeratorPoints == nDenominatorBins): sys.exit("Binning error: number of points in numerator graph, {n}, is not equal to the number of bins in the denominator histogram, {d}".format(n=nNumeratorPoints, d=nDenominatorBins))
+    outputGraph = ROOT.TGraphAsymmErrors(nNumeratorPoints)
+    outputGraph.SetName(outputName)
+    outputGraph.SetTitle(outputTitle)
+    xvalues = numeratorGraph.GetX()
+    yvalues = numeratorGraph.GetY()
+    for binIndex in range(1, 1+nDenominatorBins):
+        pointIndex = binIndex-1
+        # numeratorGraph.GetPoint(pointIndex, ROOT.Double(xvalues[pointIndex]), ROOT.Double(yvalues[pointIndex]))
+        error_xhigh = numeratorGraph.GetErrorXhigh(pointIndex)
+        error_xlow = numeratorGraph.GetErrorXlow(pointIndex)
+        error_yhigh = numeratorGraph.GetErrorYhigh(pointIndex)
+        error_ylow = numeratorGraph.GetErrorYlow(pointIndex)
+        binCenter = denominatorHistogram.GetXaxis().GetBinCenter(binIndex)
+        if not(abs(binCenter - xvalues[pointIndex]) < ZERO_TOLERANCE*abs(binCenter)): sys.exit("ERROR: at bin index = {bI}, denominator bin center = {dBC}, graph point x: {x}".format(bI=binIndex, dBC=binCenter, x = xvalues[pointIndex]))
+        binContent = denominatorHistogram.GetBinContent(binIndex)
+        if (binContent > 0):
+            outputGraph.SetPoint(pointIndex, xvalues[pointIndex], yvalues[pointIndex]/binContent)
+            outputGraph.SetPointEXlow(pointIndex, error_xlow)
+            outputGraph.SetPointEXhigh(pointIndex, error_xhigh)
+            outputGraph.SetPointEYlow(pointIndex, error_ylow/binContent)
+            outputGraph.SetPointEYhigh(pointIndex, error_yhigh/binContent)
+            if printDebug: print("Setting point: x={x1} (-{x2}+{x3}), y={y1}(-{y2}+{y3})".format(x1=xvalues[pointIndex], x2=error_xlow, x3=error_xhigh, y1=yvalues[pointIndex]/binContent, y2=error_ylow/binContent, y3=error_yhigh/binContent))
+        else:
+            print("WARNING: at bin index = {bI}, histogram contents = 0; setting ratio to 0".format(bI=binIndex))
+            outputGraph.SetPoint(pointIndex, xvalues[pointIndex], 0.)
+            outputGraph.SetPointEXlow(pointIndex, error_xlow)
+            outputGraph.SetPointEXhigh(pointIndex, error_xhigh)
+            outputGraph.SetPointEYlow(pointIndex, 0.)
+            outputGraph.SetPointEYhigh(pointIndex, 0.)
+            if printDebug: print("Setting point: x={x1} (-{x2}+{x3}), y=0.0(-0.0+0.0)".format(x1=xvalues[pointIndex], x2=error_xlow, x3=error_xhigh))
+    return outputGraph
+
 def normalizeHistogam(inputHist):
     normalizationFactor = inputHist.Integral("width")
     try:
@@ -67,7 +108,7 @@ def getSumOfBinContents(inputTH1):
     return sumBinContents
 
 def extractTH2Contents(inputTH2, outputFileName, columnTitles=None, quantityName=None, includeOverflow=False, formatSpecifiers=None, onlyOutputNonzero=True, printRangeX=False, printRangeY=False):
-    zeroTolerance = 0.000001*inputTH2.GetBinContent(inputTH2.GetMaximumBin())
+    zeroTolerance = ZERO_TOLERANCE*inputTH2.GetBinContent(inputTH2.GetMaximumBin())
     print("Extracting info from histogram...")
     outputFile = open(outputFileName, 'w')
     xAxis = inputTH2.GetXaxis()
@@ -198,7 +239,7 @@ def rescale1DHistogramByBinWidth(input1DHistogram = None):
         binError = inputClone.GetBinError(binCounter)
         binWidth = inputXAxis.GetBinWidth(binCounter)
         if(inputClone.GetBinErrorOption() == ROOT.TH1.kPoisson):
-            if (abs(int(0.5+binContent)-binContent) <= 0.001*binContent): # Because "getBinContent", even on ROOT's TH1I, apparently returns a float
+            if (abs(int(0.5+binContent)-binContent) <= ZERO_TOLERANCE*binContent): # Because "getBinContent", even on ROOT's TH1I, apparently returns a float
                 for uglyHackCounter in range(0, int(0.5+binContent)):
                     input1DHistogram.Fill(binCenter, 1.0/binWidth)
             else:
