@@ -42,13 +42,13 @@ def getRatioGraph(numeratorHistogram, denominatorHistogram):
         xBinWidth = graphXAxis.GetBinWidth(binNumber)
         numeratorValue = numeratorHistogram.GetBinContent(binNumber)
         denominatorValue = denominatorHistogram.GetBinContent(binNumber)
-        ratioValue = 0.
-        ratioError = 0.
+        ratioValue = 1.
+        ratioError = 1.
         if (denominatorValue > 0.):
             ratioValue = numeratorValue/denominatorValue
             numeratorError = numeratorHistogram.GetBinError(binNumber)
             denominatorError = denominatorHistogram.GetBinError(binNumber)
-            ratioError = math.sqrt(math.pow(numeratorError,2) + math.pow(denominatorError*ratioValue,2))/denominatorValue
+            ratioError = (1.0/denominatorValue)*math.sqrt(math.pow(numeratorError,2) + math.pow(denominatorError*ratioValue,2))
         ratioGraph.SetPoint(binNumber-1, xValue, ratioValue)
         ratioGraph.SetPointError(binNumber-1, xBinWidth, ratioError)
     return ratioGraph
