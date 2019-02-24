@@ -268,3 +268,63 @@ def printHistogramContents(inputHistogram = None):
             binErrorLow = inputHistogram.GetBinErrorLow(binCounter)
             binErrorHigh = inputHistogram.GetBinErrorUp(binCounter)
         print("Bin index {i}: {l} < var < {h}; content: {c} (- {el} + {eh})".format(i=binCounter, l=binEdgeLow, h=binEdgeHigh, c=binContent, el=binErrorLow, eh=binErrorHigh))
+
+def getTLineAngleInDegrees(pad, tline, printDebug = False):
+    x1 = pad.XtoPixel(tline.GetX1())
+    y1 = (-1)*pad.YtoPixel(tline.GetY1()) # y axis is "flipped" in pixels: top left is (0, 0)
+    x2 = pad.XtoPixel(tline.GetX2())
+    y2 = (-1)*pad.YtoPixel(tline.GetY2()) # y axis is "flipped" in pixels: top left is (0, 0)
+    if (printDebug): print("line: (x1, y1) = ({x1}, {y1}), (x2, y2) = ({x2}, {y2})".format(x1=x1, y1=y1, x2=x2, y2=y2))
+
+    # Deal with horizontal and vertical lines first
+    if ((x1 == x2) and (y1 == y2)):
+        sys.exit("ERROR: TLine does not have well-defined distinct endpoints. Found in pixel coordinates: (x1, y1) = ({x1}, {y1}), (x2, y2) = ({x2}, {y2})".format(x1=x1, y1=y1, x2=x2, y2=y2))
+    if (y1 == y2): #  horizontal
+        if (x2 > x1): #  left to right
+            if (printDebug): print("TLine is horizontal left to right.")
+            return 0.
+        else: #  right to left
+            if (printDebug): print("TLine is horizontal right to left.")
+            return 180.
+    if (x1 == x2): #  vertical
+        if (y2 > y1): #  bottom to top
+            if (printDebug): print("TLine is vertical bottom to top.")
+            return 90.
+        else: #  top to bottom
+            if (printDebug): print("TLine is vertical top to bottom.")
+            return 270.
+
+    # Find quadrant
+    quadrant = 0
+    if (x2 > x1): #  left to right
+        if (y2 > y1): # bottom to top
+            if (printDebug): print("TLine belongs to first quadrant.")
+            quadrant = 1
+        else: # top to bottom
+            if (printDebug): print("TLine belongs to fourth quadrant.")
+            quadrant = 4
+    else: # right to left
+        if (y2 > y1): # bottom to top
+            if (printDebug): print("TLine belongs to second quadrant.")
+            quadrant = 2
+        else: # top to bottom
+            if (printDebug): print("TLine belongs to third quadrant.")
+            quadrant = 3
+
+    width_x = abs(x2-x1)
+    width_y = abs(y2-y1)
+    if (printDebug): print("width_x = {wx}, width_y = {wy}".format(wx=width_x, wy=width_y))
+    angleInDegreesWithRespectToHorizontal = (180./math.pi)*math.atan(width_y/width_x)
+    fullAngleInDegrees = 0.
+    if (quadrant == 1):
+        fullAngleInDegrees = angleInDegreesWithRespectToHorizontal
+    elif (quadrant == 2):
+        fullAngleInDegrees = 180.- angleInDegreesWithRespectToHorizontal
+    elif (quadrant == 3):
+        fullAngleInDegrees = 180. + angleInDegreesWithRespectToHorizontal
+    elif (quadrant == 4):
+        fullAngleInDegrees = 360. - angleInDegreesWithRespectToHorizontal
+    else:
+        sys.exit("Unknown quadrant: {q}".format(q=quadrant))
+    if (printDebug): print("Found angle: {a}".format(a=fullAngleInDegrees))
+    return fullAngleInDegrees
