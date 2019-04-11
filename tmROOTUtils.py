@@ -251,23 +251,42 @@ def rescale1DHistogramByBinWidth(input1DHistogram = None):
 def printHistogramContents(inputHistogram = None):
     if (inputHistogram is None): sys.exit("option inputHistogram is not passed or is None.")
     if (inputHistogram.InheritsFrom("TH1")):
-        if (inputHistogram.InheritsFrom("TH2") or inputHistogram.InheritsFrom("TH3")):
-            sys.exit("Printing contents of 2D or 3D histograms not supported for now...")
+        if (inputHistogram.InheritsFrom("TH3")):
+            sys.exit("Printing contents of 3D histograms not supported for now...")
     else:
         sys.exit("Input histogram does not inherit from TH1. Class: {c}".format(c=inputHistogram.ClassName()))
     print("Printing contents of histogram with name = {n}, title = {t}".format(n=inputHistogram.GetName(), t=inputHistogram.GetTitle()))
-    inputXAxis = inputHistogram.GetXaxis()
-    for binCounter in range(0, 2+inputXAxis.GetNbins()):
-        binEdgeLow = inputXAxis.GetBinLowEdge(binCounter)
-        binEdgeHigh = inputXAxis.GetBinUpEdge(binCounter)
-        binContent = inputHistogram.GetBinContent(binCounter)
-        binError = inputHistogram.GetBinError(binCounter)
-        binErrorLow = binError
-        binErrorHigh = binError
-        if(inputHistogram.GetBinErrorOption() == ROOT.TH1.kPoisson):
-            binErrorLow = inputHistogram.GetBinErrorLow(binCounter)
-            binErrorHigh = inputHistogram.GetBinErrorUp(binCounter)
-        print("Bin index {i}: {l} < var < {h}; content: {c} (- {el} + {eh})".format(i=binCounter, l=binEdgeLow, h=binEdgeHigh, c=binContent, el=binErrorLow, eh=binErrorHigh))
+    if (inputHistogram.InheritsFrom("TH2")):
+        inputXAxis = inputHistogram.GetXaxis()
+        inputYAxis = inputHistogram.GetYaxis()
+        for xBinCounter in range(0, 2+inputXAxis.GetNbins()):
+            xBinEdgeLow = inputXAxis.GetBinLowEdge(xBinCounter)
+            xBinEdgeHigh = inputXAxis.GetBinUpEdge(xBinCounter)
+            for yBinCounter in range(0, 2+inputYAxis.GetNbins()):
+                yBinEdgeLow = inputYAxis.GetBinLowEdge(yBinCounter)
+                yBinEdgeHigh = inputYAxis.GetBinUpEdge(yBinCounter)
+                globalBinNumber = inputHistogram.GetBin(xBinCounter, yBinCounter)
+                binContent = inputHistogram.GetBinContent(globalBinNumber)
+                binError = inputHistogram.GetBinError(globalBinNumber)
+                binErrorLow = binError
+                binErrorHigh = binError
+                if(inputHistogram.GetBinErrorOption() == ROOT.TH1.kPoisson):
+                    binErrorLow = inputHistogram.GetBinErrorLow(globalBinNumber)
+                    binErrorHigh = inputHistogram.GetBinErrorUp(globalBinNumber)
+                print("({xlo} < x < {xhi}), ({ylo} < y < {yhi}): {c} (- {elo} + {ehi})".format(xlo=xBinEdgeLow, xhi=xBinEdgeHigh, ylo=yBinEdgeLow, yhi=yBinEdgeHigh, c=binContent, elo=binErrorLow, ehi=binErrorHigh))
+    else:
+        inputXAxis = inputHistogram.GetXaxis()
+        for binCounter in range(0, 2+inputXAxis.GetNbins()):
+            binEdgeLow = inputXAxis.GetBinLowEdge(binCounter)
+            binEdgeHigh = inputXAxis.GetBinUpEdge(binCounter)
+            binContent = inputHistogram.GetBinContent(binCounter)
+            binError = inputHistogram.GetBinError(binCounter)
+            binErrorLow = binError
+            binErrorHigh = binError
+            if(inputHistogram.GetBinErrorOption() == ROOT.TH1.kPoisson):
+                binErrorLow = inputHistogram.GetBinErrorLow(binCounter)
+                binErrorHigh = inputHistogram.GetBinErrorUp(binCounter)
+            print("Bin index {i}: {l} < var < {h}; content: {c} (- {el} + {eh})".format(i=binCounter, l=binEdgeLow, h=binEdgeHigh, c=binContent, el=binErrorLow, eh=binErrorHigh))
 
 def getTLineAngleInDegrees(pad, tline, printDebug = False):
     x1 = pad.XtoPixel(tline.GetX1())
