@@ -53,6 +53,71 @@ def getRatioGraph(numeratorHistogram, denominatorHistogram):
         ratioGraph.SetPointError(binNumber-1, xBinWidth, ratioError)
     return ratioGraph
 
+def checkTH1Alignment(histogram1=None, histogram2=None):
+    '''Checks that histogram1 and histogram2 are not null, inherit from TH1, have the same class, and have x and y axes that align.'''
+    if ((histogram1 is None) or (histogram2 is None)):
+        print("histogram1 or histogram2 are either not passed or None.")
+        return False
+    if (not(histogram1.InheritsFrom("TH1") == ROOT.kTRUE) or not(histogram2.InheritsFrom("TH1") == ROOT.kTRUE)):
+        print("histogram1 and histogram2 must both inherit from TH1. ClassName of histogram1 = {n}, histogram2 = {d}".format(n=histogram1.ClassName(), d=histogram2.ClassName()))
+        return False
+    if (not(histogram1.ClassName() == histogram2.ClassName())):
+        print("histogram1 and histogram2 must belong to the same class; currently, ClassName of histogram1 = {n}, histogram2 = {d}".format(n=histogram1.ClassName(), d=histogram2.ClassName()))
+        return False
+    if (not(histogram1.GetXaxis().GetNbins() == histogram2.GetXaxis().GetNbins())):
+        print("number of bins in X in histogram1 = {n1} does not match histogram2 = {n2}".format(n1 = histogram1.GetXaxis().GetNbins(), n2 = denominatorHistogram.GetXaxis().GetNbins()))
+        return False
+    for xBinIndex in range(1, 1+histogram1.GetXaxis().GetNbins()):
+        if (not(abs(histogram1.GetXaxis().GetBinCenter(xBinIndex) - histogram2.GetXaxis().GetBinCenter(xBinIndex)) < ZERO_TOLERANCE*max(1., abs(histogram1.GetXaxis().GetBinCenter(xBinIndex))))):
+            print("x bin centers do not align at x index = {i}. centers: histogram1 = {x1}, histogram2 = {x2}".format(x1 = histogram1.GetXaxis().GetBinCenter(xBinIndex), x2 = histogram2.GetXaxis().GetBinCenter(xBinIndex)))
+            return False
+    if (histogram1.InheritsFrom("TH2") == ROOT.kTRUE):
+        if (not(histogram1.GetYaxis().GetNbins() == histogram2.GetYaxis().GetNbins())):
+            print("number of bins in Y in histogram1 = {n1} does not match histogram2 = {n2}".format(n1 = histogram1.GetYaxis().GetNbins(), n2 = denominatorHistogram.GetYaxis().GetNbins()))
+            return False
+        for yBinIndex in range(1, 1+histogram1.GetYaxis().GetNbins()):
+            if (not(abs(histogram1.GetYaxis().GetBinCenter(yBinIndex) - histogram2.GetYaxis().GetBinCenter(yBinIndex)) < ZERO_TOLERANCE*max(1., abs(histogram1.GetYaxis().GetBinCenter(yBinIndex))))):
+                print("y bin centers do not align at y index = {i}. centers: histogram1 = {y1}, histogram2 = {y2}".format(y1 = histogram1.GetYaxis().GetBinCenter(yBinIndex), y2 = histogram2.GetYaxis().GetBinCenter(yBinIndex)))
+                return False
+    return True
+
+def getRatioHistogram(numeratorHistogram=None, denominatorHistogram=None, valueAtZeroDenominator = 0., name="ratio", title=""):
+    if not(checkTH1Alignment(numeratorHistogram, denominatorHistogram)): sys.exit("ERROR: Numerator and denominator histograms do not align.")
+    outputHistogram = numeratorHistogram.Clone("new")
+    outputHistogram.SetName(name)
+    outputHistogram.SetTitle(title)
+    if (numeratorHistogram.InheritsFrom("TH2") == ROOT.kTRUE):
+        for xBinIndex in range(1, 1+outputHistogram.GetXaxis().GetNbins()):
+            xCenter = outputHistogram.GetXaxis().GetBinCenter(xBinIndex)
+            for yBinIndex in range(1, 1+outputHistogram.GetYaxis().GetNbins()):
+                yCenter = outputHistogram.GetYaxis().GetBinCenter(yBinIndex)
+                numerator = numeratorHistogram.GetBinContent(numeratorHistogram.FindFixBin(xCenter, yCenter))
+                numeratorError = numeratorHistogram.GetBinError(numeratorHistogram.FindFixBin(xCenter, yCenter))
+                denominator = denominatorHistogram.GetBinContent(denominatorHistogram.FindFixBin(xCenter, yCenter))
+                denominatorError = denominatorHistogram.GetBinError(denominatorHistogram.FindFixBin(xCenter, yCenter))
+                ratio = valueAtZeroDenominator
+                ratioError = 0.
+                if (denominator > 0.):
+                    ratio = numerator/denominator
+                    if (numerator > 0.): ratioError = ratio*math.sqrt(math.pow(numeratorError/numerator, 2) + math.pow(denominatorError/denominator, 2))
+                outputHistogram.SetBinContent(outputHistogram.FindFixBin(xCenter, yCenter), ratio)
+                outputHistogram.SetBinError(outputHistogram.FindFixBin(xCenter, yCenter), ratioError)
+    else:
+        for xBinIndex in range(1, 1+outputHistogram.GetXaxis().GetNbins()):
+            xCenter = outputHistogram.GetXaxis().GetBinCenter(xBinIndex)
+            numerator = numeratorHistogram.GetBinContent(numeratorHistogram.FindFixBin(xCenter))
+            numeratorError = numeratorHistogram.GetBinError(numeratorHistogram.FindFixBin(xCenter))
+            denominator = denominatorHistogram.GetBinContent(denominatorHistogram.FindFixBin(xCenter))
+            denominatorError = denominatorHistogram.GetBinError(denominatorHistogram.FindFixBin(xCenter))
+            ratio = valueAtZeroDenominator
+            ratioError = 0.
+            if (denominator > 0.):
+                ratio = numerator/denominator
+                if (numerator > 0.): ratioError = ratio*math.sqrt(math.pow(numeratorError/numerator, 2) + math.pow(denominatorError/denominator, 2))
+            outputHistogram.SetBinContent(outputHistogram.FindFixBin(xCenter), ratio)
+            outputHistogram.SetBinError(outputHistogram.FindFixBin(xCenter), ratioError)
+    return outputHistogram
+
 def getGraphOfRatioOfAsymmErrorsGraphToHistogram(numeratorGraph=None, denominatorHistogram=None, outputName="g", outputTitle="", printDebug=False):
     if ((numeratorGraph is None) or (denominatorHistogram is None)):
         sys.exit("ERROR: numeratorGraph or denominatorHistogram are either not passed or None.")
