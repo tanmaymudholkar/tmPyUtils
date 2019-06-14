@@ -31,4 +31,7 @@ def get_lumi(runNumber=-1, printDebug=False):
         outputDict[ls1]["lumi"] = float(datapoint["recorded"])
         outputDict[ls1]["PU"] = float(datapoint["avgpu"])
         if (printDebug): print("Adding these values from LS {ls} to output dictionary: {o}".format(ls=ls1, o=str(outputDict[ls1])))
+    lumilist_fileObject.close()
+    if (printDebug): print("Removing temp file...")
+    subprocess.call("set -x && rm -v /tmp/{u}/lumi_tmp.txt && set +x".format(u=userName), shell=True)
     return outputDict
