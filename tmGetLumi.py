@@ -29,6 +29,7 @@ def get_lumi(runNumber=-1, printDebug=False):
         if not(ls1 == ls2): sys.exit("Unexpected format for the lumisection numbers.")
         outputDict[ls1] = {}
         outputDict[ls1]["lumi"] = float(datapoint["recorded"])
+        outputDict[ls1]["lumi_delivered"] = float(datapoint["delivered"])
         outputDict[ls1]["PU"] = float(datapoint["avgpu"])
         if (printDebug): print("Adding these values from LS {ls} to output dictionary: {o}".format(ls=ls1, o=str(outputDict[ls1])))
     lumilist_fileObject.close()
