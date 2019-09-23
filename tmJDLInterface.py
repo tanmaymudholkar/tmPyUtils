@@ -53,11 +53,6 @@ class tmJDLInterface:
                 transferString += "{filename}, ".format(filename=fileToTransfer)
             transferString = transferString[:-2] # To remove the ", " at the end
             outputJDL.write("{tS}\n".format(tS=transferString))
-        # if [ "${11}" == "inputFromFile" ]; then
-        #     echo "transfer_input_files = /uscms/homes/t/tmudholk/private/tmPyUtils/tmProgressBar.py, /uscms/homes/t/tmudholk/private/tmPyUtils/tmGeneralUtils.py, /uscms/homes/t/tmudholk/private/tmPyUtils/__init__.py, /uscms/homes/t/tmudholk/private/stealth/STEALTH/selectEvents.py, /uscms/homes/t/tmudholk/private/stealth/STEALTH/${2}" >> ${1}
-        # else
-        #     echo "transfer_input_files = /uscms/homes/t/tmudholk/private/tmPyUtils/tmProgressBar.py, /uscms/homes/t/tmudholk/private/tmPyUtils/tmGeneralUtils.py, /uscms/homes/t/tmudholk/private/tmPyUtils/__init__.py, /uscms/homes/t/tmudholk/private/stealth/STEALTH/selectEvents.py" >> ${1}
-        # fi
         outputJDL.write("Output = log_{pN}.stdout\n".format(pN=self.processName_))
         outputJDL.write("Error = log_{pN}.stderr\n".format(pN=self.processName_))
         outputJDL.write("Log = log_{pN}.log\n".format(pN=self.processName_))
@@ -69,6 +64,5 @@ class tmJDLInterface:
                 argumentsString += "{sA} ".format(sA = scriptArgument)
             argumentsString = argumentsString[:-1] # To remove the space character at the end
             outputJDL.write("{aS}\n".format(aS=argumentsString))
-        # outputJDL.write("Arguments = ${2} ${3} ${4} ${5} ${6} ${7} ${8} ${9}${INPUT_FROM_FILE_FLAG}\n" >> ${1})
         outputJDL.write("Queue 1\n")
         outputJDL.close()
