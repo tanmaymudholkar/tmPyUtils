@@ -12,6 +12,15 @@ class tmJDLInterface:
         if not(os.path.isdir(outputDirectoryRelativePath)):
             print("WARNING: folder \"{oDRP}\" does not exist, creating...".format(oDRP=outputDirectoryRelativePath))
             os.system("mkdir -p {oDRP}".format(oDRP=outputDirectoryRelativePath))
+        hostname = os.getenv("HOSTNAME")
+        self.habitat_ = ""
+        if ("lxplus" in hostname):
+            self.habitat_ = "lxplus"
+        elif ("fnal" in hostname):
+            self.habitat_ = "fnal"
+        else:
+            sys.exit("ERROR: Unrecognized hostname: {h}, seems to be neither lxplus nor fnal.".format(h=hostname))
+        self.flavor_ = ""
 
     def addScriptArgument(self, scriptArgument):
         if not(isinstance(scriptArgument, basestring)):
@@ -37,6 +46,13 @@ class tmJDLInterface:
         for fileToTransfer in listOfFilesToTransfer:
             self.addFileToTransfer(fileToTransfer)
 
+    def setFlavor(self, flavor):
+        if not(isinstance(flavor, basestring)):
+            sys.exit("tmJDLInterface: method setFlavor only accepts raw strings as an argument.")
+        if not(self.habitat_ == "lxplus"):
+            sys.exit("tmJDLInterface: method setFlavor only usable from lxplus.")
+        self.flavor_ = flavor
+
     def writeToFile(self):
         outputJDLFileName = ("{oD}/{name}.jdl".format(oD=self.outputDirectoryRelativePath_, name=self.processName_))
         if os.path.isfile(outputJDLFileName):
@@ -44,25 +60,30 @@ class tmJDLInterface:
             os.system("rm -f {out}".format(out=outputJDLFileName))
         outputJDL = open(outputJDLFileName, "w")
         outputJDL.write("universe = vanilla\n")
-        outputJDL.write("Executable = {script}\n".format(script=self.scriptPath_))
-        outputJDL.write("Should_Transfer_Files = YES\n")
-        outputJDL.write("WhenToTransferOutput = ON_EXIT\n")
+        outputJDL.write("executable = {sP}\n".format(sP=self.scriptPath_))
+        if (self.habitat_ == "fnal"): # questionable -- doesn't seem to achieve anything
+            outputJDL.write("should_transfer_files = YES\n")
+            outputJDL.write("whentotransferoutput = ON_EXIT\n")
         if (len(self.listOfFilesToTransfer_) > 0):
-            transferString = "Transfer_Input_Files = "
+            transferString = "transfer_input_files = "
             for fileToTransfer in (self.listOfFilesToTransfer_):
-                transferString += "{filename}, ".format(filename=fileToTransfer)
-            transferString = transferString[:-2] # To remove the ", " at the end
+                transferString += "{f},".format(f=fileToTransfer)
+            transferString = transferString[:-1] # To remove the "," at the end
             outputJDL.write("{tS}\n".format(tS=transferString))
-        outputJDL.write("Output = log_{pN}.stdout\n".format(pN=self.processName_))
-        outputJDL.write("Error = log_{pN}.stderr\n".format(pN=self.processName_))
-        outputJDL.write("Log = log_{pN}.log\n".format(pN=self.processName_))
-        outputJDL.write("notify_user = $ENV(LOGNAME)@cern.ch\n")
-        outputJDL.write("x509userproxy = $ENV(X509_USER_PROXY)\n")
+        outputJDL.write("output = log_{pN}.stdout\n".format(pN=self.processName_))
+        outputJDL.write("error = log_{pN}.stderr\n".format(pN=self.processName_))
+        outputJDL.write("log = log_{pN}.log\n".format(pN=self.processName_))
+        outputJDL.write("notify_user = {lN}@cern.ch\n".format(lN=os.getenv("LOGNAME")))
         if (len(self.listOfScriptArguments_) > 0):
-            argumentsString = "Arguments = "
+            argumentsString = "arguments = "
             for scriptArgument in self.listOfScriptArguments_:
                 argumentsString += "{sA} ".format(sA = scriptArgument)
             argumentsString = argumentsString[:-1] # To remove the space character at the end
             outputJDL.write("{aS}\n".format(aS=argumentsString))
-        outputJDL.write("Queue 1\n")
+        if (self.habitat_ == "lxplus"):
+            if (self.flavor_):
+                outputJDL.write("+JobFlavour = {f}\n".format(f=self.flavor_)) # the "+" is deliberate and needed according to the documentation
+            else:
+                sys.exit("Flavor needs to be set for lxplus jobs.")
+        outputJDL.write("queue 1\n")
         outputJDL.close()
