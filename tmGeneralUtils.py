@@ -2,6 +2,26 @@ from __future__ import print_function, division
 
 import sys
 
+def alignFixedWidthFloatLeft(width, precision, number):
+        if not(isinstance(number, float)): sys.exit("alignFixedWidthFloatLeft called with non-float object: {o}".format(o=number))
+        formatter = ""
+        if (width == 0):
+            formatter = "{{n:.{p}f}}".format(p=precision)
+        else:
+            formatter = "{{n:<{w}.{p}f}}".format(w=width, p=precision)
+        returnString = formatter.format(n=number)
+        return returnString
+
+def alignFixedWidthStringLeft(width, inputString):
+        if not(isinstance(inputString, str)): sys.exit("alignFixedWidthStringLeft called with non-string object: {o}".format(o=inputString))
+        formatter = ""
+        formatter = "{{s:<{w}}}".format(w=width)
+        returnString = formatter.format(s=inputString)
+        return returnString
+
+def check_dict_keys_against_list(targetDict, targetList):
+    return (set(targetDict.keys()) == set(targetList))
+
 def prettyPrintDictionary(inputDict, valueFormatSpecification="", keyPrintOrder=[]):
     stringLengths = [len(str(key)) for key in inputDict.keys()]
     maxStringLength = max(stringLengths)
