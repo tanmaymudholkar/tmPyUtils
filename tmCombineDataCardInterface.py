@@ -53,7 +53,7 @@ class tmCombineDataCardInterface:
         yield(tmGeneralUtils.alignFixedWidthStringLeft(width=10, inputString="kmax {nU}".format(nU=self.nUncertainties)) + " number of nuisance parameters (sources of systematic uncertainties)")
 
     def generateObservationsSection(self):
-        signalLabelWidth = 4 + max(len(label) for label in self.signalBinLabels)
+        signalLabelWidth = max(15, 4 + max(len(label) for label in self.signalBinLabels))
 
         titleLine = tmGeneralUtils.alignFixedWidthStringLeft(width=15, inputString="bin")
         for signalBinLabel in self.signalBinLabels:
@@ -68,7 +68,7 @@ class tmCombineDataCardInterface:
     def generateExpectationsSection(self):
         systematicsNamesColumnWidth = 4 + max(len(label) for label in self.systematicsLabels)
         systematicsTypesColumnWidth = 4 + max(len(sType) for sType in self.systematicsTypes.values())
-        signalLabelWidth = 4 + max(len(label) for label in self.signalBinLabels)
+        signalLabelWidth = max(15, 4 + max(len(label) for label in self.signalBinLabels))
 
         titleLine = tmGeneralUtils.alignFixedWidthStringLeft(width=(systematicsNamesColumnWidth+systematicsTypesColumnWidth), inputString="bin")
         for signalBinLabel in self.signalBinLabels:
@@ -103,14 +103,21 @@ class tmCombineDataCardInterface:
     def generateSystematicsSection(self):
         systematicsNamesColumnWidth = 4 + max(len(label) for label in self.systematicsLabels)
         systematicsTypesColumnWidth = 4 + max(len(sType) for sType in self.systematicsTypes.values())
-        signalLabelWidth = 4 + max(len(label) for label in self.signalBinLabels)
+        signalLabelWidth = max(15, 4 + max(len(label) for label in self.signalBinLabels))
         for systematicsLabel in self.systematicsLabels:
             systematicsLine = tmGeneralUtils.alignFixedWidthStringLeft(width=systematicsNamesColumnWidth, inputString=systematicsLabel)
             systematicsLine += tmGeneralUtils.alignFixedWidthStringLeft(width=systematicsTypesColumnWidth, inputString=self.systematicsTypes[systematicsLabel])
             for signalBinLabel in self.signalBinLabels:
                 for processLabel in (self.signalProcessLabels + self.backgroundProcessLabels):
                     try:
-                        systematicsLine += tmGeneralUtils.alignFixedWidthFloatLeft(width=signalLabelWidth, precision=3, number=self.systematics[systematicsLabel][signalBinLabel][processLabel])
+                        if isinstance(self.systematics[systematicsLabel][signalBinLabel][processLabel], dict):
+                            try:
+                                tmp = (tmGeneralUtils.alignFixedWidthFloatLeft(width=signalLabelWidth, precision=3, number=self.systematics[systematicsLabel][signalBinLabel][processLabel]["Down"])).rstrip() + "/"
+                                systematicsLine += (tmp + tmGeneralUtils.alignFixedWidthFloatLeft(width=(signalLabelWidth-len(tmp)), precision=3, number=self.systematics[systematicsLabel][signalBinLabel][processLabel]["Up"]))
+                            except KeyError:
+                                sys.exit("ERROR: systematics[systematicsLabel][signalBinLabel][processLabel] is a dict but does not have elements named \"Up\" or \"Down\". dict contents: {c}".format(c=systematics[systematicsLabel][signalBinLabel][processLabel]))
+                        else:
+                            systematicsLine += tmGeneralUtils.alignFixedWidthFloatLeft(width=signalLabelWidth, precision=3, number=self.systematics[systematicsLabel][signalBinLabel][processLabel])
                     except KeyError:
                         systematicsLine += tmGeneralUtils.alignFixedWidthStringLeft(width=signalLabelWidth, inputString="-")
             yield(systematicsLine)
