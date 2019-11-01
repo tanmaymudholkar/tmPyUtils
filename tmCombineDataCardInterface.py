@@ -139,3 +139,69 @@ class tmCombineDataCardInterface:
         for line in self.generateSystematicsSection():
             outputFile.write(line.rstrip() + "\n")
         outputFile.close()
+
+def tmCombineDataCardInterfaceTest():
+    outputFilePath = raw_input("Enter absolute or relative path to test output file: ")
+    outputFileParentFolder = "/".join(outputFilePath.split("/")[:-1])
+    returnCode = os.system("set -x && mkdir -p {oFPF} && set +x".format(oFPF=outputFileParentFolder))
+    if (returnCode != 0): sys.exit("ERROR: Unable to check if folder {oFPF} exists or create it.".format(oFPF=outputFileParentFolder))
+
+    signalBinLabels = ["signalBinTest1", "signalBinTest2"]
+    observedNEvents = {
+        "signalBinTest1": 10,
+        "signalBinTest2": 20
+    }
+    backgroundProcessLabels = ["testBackground1", "testBackground2"]
+    signalProcessLabels = ["testSignal1", "testSignal2"]
+
+    expectedNEvents = {
+        "signalBinTest1": {
+            "testBackground1": 3.1,
+            "testBackground2": 3.1,
+            "testSignal1": 1.5,
+            "testSignal2": 1.5
+        },
+        "signalBinTest2": {
+            "testBackground1": 5.1,
+            "testBackground2": 7.1,
+            "testSignal1": 3.5,
+            "testSignal2": 2.5
+        }
+    }
+
+    systematicsLabels = ["systematic1", "reallyLongSystematicsLabel"]
+    systematicsTypes = {
+        "systematic1": "lnN",
+        "reallyLongSystematicsLabel": "gmN 15"
+    }
+    systematics = {
+        "systematic1": {
+            "signalBinTest1": {
+                "testSignal1": {
+                    "Down": 0.95,
+                    "Up": 1.05
+                },
+                "testSignal2": 1.05
+            },
+            "signalBinTest2": {
+                "testBackground1": 0.,
+                "testSignal1": 1.05,
+                "testSignal2": 1.05
+            }
+        },
+        "reallyLongSystematicsLabel": {
+            "signalBinTest2": {
+                "testBackground1": 0.,
+                "testBackground2": {
+                    "Up": 1.1,
+                    "Down": 0.9
+                }
+            }
+        }
+    }
+
+    dataCardInterface = tmCombineDataCardInterface(list_signalBinLabels=signalBinLabels, list_backgroundProcessLabels=backgroundProcessLabels, list_signalProcessLabels=signalProcessLabels, list_systematicsLabels=systematicsLabels, dict_observedNEvents=observedNEvents, dict_expectedNEvents=expectedNEvents, dict_systematicsTypes=systematicsTypes, dict_systematics=systematics)
+    dataCardInterface.writeToFile(outputFilePath="{oFP}".format(oFP=outputFilePath))
+
+if __name__ == "__main__":
+    tmCombineDataCardInterfaceTest()
