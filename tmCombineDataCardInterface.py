@@ -62,7 +62,10 @@ class tmCombineDataCardInterface:
 
         observationsLine = tmGeneralUtils.alignFixedWidthStringLeft(width=15, inputString="observation")
         for signalBinLabel in self.signalBinLabels:
-            observationsLine += tmGeneralUtils.alignFixedWidthStringLeft(width=signalLabelWidth, inputString=str(self.observedNEvents[signalBinLabel]))
+            if isinstance(self.observedNEvents[signalBinLabel], int):
+                observationsLine += tmGeneralUtils.alignFixedWidthStringLeft(width=signalLabelWidth, inputString=str(self.observedNEvents[signalBinLabel]))
+            elif isinstance(self.observedNEvents[signalBinLabel], float):
+                observationsLine += tmGeneralUtils.alignFixedWidthFloatLeft(width=signalLabelWidth, precision=3, number=self.observedNEvents[signalBinLabel])
         yield(observationsLine)
 
     def generateExpectationsSection(self):
