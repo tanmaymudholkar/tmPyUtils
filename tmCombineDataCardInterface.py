@@ -138,8 +138,9 @@ class tmCombineDataCardInterface:
                     rateParamsLineCopy2 += tmGeneralUtils.alignFixedWidthStringLeft(width=rateParamProcessesColumnWidth, inputString=paramProcessLabel)
                     rateParamsLineCopy2 += tmGeneralUtils.alignFixedWidthFloatLeft(width=rateParamProcessesColumnWidth, precision=3, number=paramProperties[2])
                     if (len(paramProperties) == 5):
-                        rateParamsLineCopy2 += tmGeneralUtils.alignFixedWidthFloatLeft(width=rateParamProcessesColumnWidth, precision=3, number=paramProperties[3]) # initial value
-                        rateParamsLineCopy2 += tmGeneralUtils.alignFixedWidthFloatLeft(width=rateParamProcessesColumnWidth, precision=3, number=paramProperties[4]) # final value
+                        rateParamsLineCopy2 += tmGeneralUtils.alignFixedWidthStringLeft(width=2*rateParamProcessesColumnWidth, inputString="[{min:.3f},{max:.3f}]".format(min=paramProperties[3], max=paramProperties[4]))
+                        # rateParamsLineCopy2 += tmGeneralUtils.alignFixedWidthFloatLeft(width=rateParamProcessesColumnWidth, precision=3, number=paramProperties[3]) # min value
+                        # rateParamsLineCopy2 += tmGeneralUtils.alignFixedWidthFloatLeft(width=rateParamProcessesColumnWidth, precision=3, number=paramProperties[4]) # max value
                     yield(rateParamsLineCopy2)
 
     def generateSystematicsSection(self):
