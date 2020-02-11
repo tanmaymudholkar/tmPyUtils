@@ -3,13 +3,14 @@ from __future__ import print_function, division
 import sys
 
 def alignFixedWidthFloatLeft(width, precision, number):
-    if not(isinstance(number, float)): sys.exit("alignFixedWidthFloatLeft called with non-float object: {o}".format(o=number))
+    if not(isinstance(number, float) or isinstance(number, int)): sys.exit("alignFixedWidthFloatLeft called with non-float object: {o}".format(o=number))
+    fNumber = 1.0*number
     formatter = ""
     if (width == 0):
         formatter = "{{n:.{p}f}}".format(p=precision)
     else:
         formatter = "{{n:<{w}.{p}f}}".format(w=width, p=precision)
-    returnString = formatter.format(n=number)
+    returnString = formatter.format(n=fNumber)
     return returnString
 
 def alignFixedWidthStringLeft(width, inputString):
@@ -66,3 +67,21 @@ def writeConfigurationParametersToFile(configurationParametersList, outputFilePa
         parameterValue = configurationParameters[2]
         outputFileObject.write("{t} {name}={value}\n".format(t=parameterType, name=parameterName, value=parameterValue))
     outputFileObject.close()
+
+def get_bytesize_human_readable(size_in_bytes_raw = -1):
+    if (size_in_bytes_raw < 0): sys.exit("ERROR in tmGeneralUtils.get_bytesize_human_readable: argument size_in_bytes_raw must be positive.")
+    size_in_bytes = float(size_in_bytes_raw)
+    if (size_in_bytes_raw < pow(1000, 1)):
+        return ("{s:.2f} B".format(s=size_in_bytes))
+    elif (size_in_bytes_raw < pow(1000, 2)):
+        return ("{s:.2f} KB".format(s=size_in_bytes/pow(1000, 1)))
+    elif (size_in_bytes_raw < pow(1000, 3)):
+        return ("{s:.2f} MB".format(s=size_in_bytes/pow(1000, 2)))
+    elif (size_in_bytes_raw < pow(1000, 4)):
+        return ("{s:.2f} GB".format(s=size_in_bytes/pow(1000, 3)))
+    elif (size_in_bytes_raw < pow(1000, 5)):
+        return ("{s:.2f} TB".format(s=size_in_bytes/pow(1000, 4)))
+    elif (size_in_bytes_raw < pow(1000, 6)): # lol
+        return ("{s:.2f} PB".format(s=size_in_bytes/pow(1000, 5)))
+    else:
+        sys.exit("ERROR in tmGeneralUtils.get_bytesize_human_readable: argument size_in_bytes_raw is too large. Current value: {v}".format(v=size_in_bytes_raw))
