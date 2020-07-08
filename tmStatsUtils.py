@@ -2,10 +2,10 @@ from __future__ import print_function, division
 
 import os, sys, math
 
-DEFAULT_ZERO_TOLERANCE_COEFFICIENT=0.0001
+DEFAULT_ZERO_TOLERANCE_COEFFICIENT=0.001
 
 def getMonotonicFunctionApproximateZero(inputFunction=None, xRange=None, zeroTolerance=None, autoZeroTolerance=False, printDebug=False):
-    if (printDebug): print("Called for xRange = {xR}, zeroTolerance={zT}".format(xR=xRange, zT=zeroTolerance))
+    if (printDebug): print("getMonotonicFunctionApproximateZero called for xRange = {xR}, zeroTolerance={zT}".format(xR=xRange, zT=zeroTolerance))
     if (inputFunction is None): raise TypeError("Error in tmStatsUtils.getMonotonicFunctionApproximateZero(): named argument inputFunction is None")
     if not(callable(inputFunction)): raise TypeError("Error in tmStatsUtils.getMonotonicFunctionApproximateZero(): object passed as named argument inputFunction is not callable")
 
@@ -48,7 +48,7 @@ def getMonotonicFunctionApproximateZero(inputFunction=None, xRange=None, zeroTol
     return getMonotonicFunctionApproximateZero(inputFunction=inputFunction, xRange=nextRange, zeroTolerance=zeroTolerance, printDebug=printDebug)
 
 def getStrictlyConvexFunctionApproximateMinimum(inputFunction=None, xRange=None, zeroTolerance=None, autoZeroTolerance=False, printDebug=False):
-    if (printDebug): print("Called for xRange = {xR}, zeroTolerance={zT}".format(xR=xRange, zT=zeroTolerance))
+    if (printDebug): print("getStrictlyConvexFunctionApproximateMinimum called for xRange = {xR}, zeroTolerance={zT}".format(xR=xRange, zT=zeroTolerance))
     if (inputFunction is None): raise TypeError("Error in tmStatsUtils.getStrictlyConvexFunctionApproximateMinimum(): named argument inputFunction is None")
     if not(callable(inputFunction)): raise TypeError("Error in tmStatsUtils.getStrictlyConvexFunctionApproximateMinimum(): object passed as named argument inputFunction is not callable")
 
@@ -69,6 +69,31 @@ def getStrictlyConvexFunctionApproximateMinimum(inputFunction=None, xRange=None,
 
     if (printDebug): print("Now passing slope of function to getMonotonicFunctionApproximateZero:")
     return getMonotonicFunctionApproximateZero(inputFunction=functionSlope, xRange=xRange, zeroTolerance=zeroTolerance, autoZeroTolerance=autoZeroTolerance, printDebug=printDebug)
+
+def getGlobalMinimum(inputFunction=None, xRange=None, zeroTolerance=None, autoZeroTolerance=False, printDebug=False):
+    # Works for functions that have a well-defined minimum but are not necessarily convex throughout xRange
+    if (printDebug): print("getGlobalMinimum called for xRange = {xR}, zeroTolerance={zT}".format(xR=xRange, zT=zeroTolerance))
+    if (inputFunction is None): raise TypeError("Error in tmStatsUtils.getStrictlyConvexFunctionApproximateMinimum(): named argument inputFunction is None")
+    if not(callable(inputFunction)): raise TypeError("Error in tmStatsUtils.getStrictlyConvexFunctionApproximateMinimum(): object passed as named argument inputFunction is not callable")
+
+    if xRange is None: raise TypeError("Error in tmStatsUtils.getStrictlyConvexFunctionApproximateMinimum(): named argument xRange is None")
+    if not(len(xRange) == 2): raise TypeError("Error in tmStatsUtils.getStrictlyConvexFunctionApproximateMinimum(): Given argument xRange = {xR} does not have exactly two elements".format(xR=xRange))
+
+    xmin = xRange[0]
+    xmax = xRange[1]
+    if (xmax <= xmin): raise ValueError("Error in tmStatsUtils.getStrictlyConvexFunctionApproximateMinimum(): Argument xRange needs to have min strictly less than max; currently xmin = {xmin}, xmax={xmax}".format(xmin=xmin, xmax=xmax))
+
+    # Step 1: find location of global minimum by stepping through the data
+    globalMinimum = None
+    globalMinimumX = None
+    for xcounter in range(0, 101):
+        xvalue = xmin + (xcounter/100)*(xmax - xmin)
+        functionValue = inputFunction(xvalue)
+        if ((globalMinimum is None) or (functionValue < globalMinimum)):
+            globalMinimum = functionValue
+            globalMinimumX = xvalue
+    # Step 2: assume that the function will be convex over 5% of the input range at least (if not, the following will throw an exception)
+    return getStrictlyConvexFunctionApproximateMinimum(inputFunction=inputFunction, xRange=[globalMinimumX - 0.025*(xmax - xmin), globalMinimumX + 0.025*(xmax - xmin)], zeroTolerance=zeroTolerance, autoZeroTolerance=autoZeroTolerance, printDebug=printDebug)
 
 def tmStatsUtilsTest():
     print("Beginning tests:")
