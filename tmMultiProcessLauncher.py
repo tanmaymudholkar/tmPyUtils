@@ -32,7 +32,7 @@ class tmMultiProcessLauncher:
             formattedShellCommand += shellCommands
         formattedShellCommand += " && set +x"
         if printDebug: print("Spawning process with command: {fSC}".format(fSC=formattedShellCommand))
-        processHandle = subprocess.Popen("{fSC}".format(fSC=formattedShellCommand), stdout=outputFileHandle, stderr=subprocess.STDOUT, shell=True)
+        processHandle = subprocess.Popen("{fSC}".format(fSC=formattedShellCommand), stdout=outputFileHandle, stderr=subprocess.STDOUT, shell=True, executable="/bin/bash")
         self.processes_list.append({"logFileName": logFileName,
                                     "processHandle": processHandle})
 
