@@ -15,20 +15,23 @@ class tmMultiProcessLauncher:
             processHandle.kill()
             (self.processes_list).remove(process)
 
-    def spawn(self, shellCommands=None, logFileName=None, printDebug=False):
+    def spawn(self, shellCommands=None, optionalEnvSetup=None, logFileName=None, printDebug=False):
         if ((shellCommands is None) or (logFileName is None)
             or (shellCommands == "") or (logFileName == "")
             or (shellCommands == [])): sys.exit("ERROR in tmProcessLauncher: both shellCommands to launch and logFileName must be specified. Currently, shellCommands={sC}, logFileName={lFN}".format(sC=shellCommands, lFN=logFileName))
-        if printDebug: print("spawn called with shellCommands: {sC}, logFileName: {lFN}".format(sC=shellCommands, lFN=logFileName))
-        if printDebug: print("About to spawn: {c}".format(c=shellCommands))
         logFilesList = [process["logFileName"] for process in self.processes_list]
         if logFileName in logFilesList:
             self.killAll()
             sys.exit("ERROR: duplicate log file name: {lFN}".format(lFN=logFileName))
         outputFileHandle = open("{lOF}/{lFN}".format(lOF=self.logOutputFolder, lFN=logFileName), 'w')
-        formattedShellCommand = shellCommands
+        formattedShellCommand = "set -x && "
+        if not(optionalEnvSetup is None): formattedShellCommand = "{oES} && echo \"env setup done.\" && set -x && ".format(oES=optionalEnvSetup)
         if isinstance(shellCommands, list):
-            formattedShellCommand = " && ".join(shellCommands)
+            formattedShellCommand += " && ".join(shellCommands)
+        else:
+            formattedShellCommand += shellCommands
+        formattedShellCommand += " && set +x"
+        if printDebug: print("Spawning process with command: {fSC}".format(fSC=formattedShellCommand))
         processHandle = subprocess.Popen("{fSC}".format(fSC=formattedShellCommand), stdout=outputFileHandle, stderr=subprocess.STDOUT, shell=True)
         self.processes_list.append({"logFileName": logFileName,
                                     "processHandle": processHandle})
@@ -75,11 +78,11 @@ def tmMultiProcessLauncherTest():
     multiProcessLauncher.monitorToCompletion(printDebug=True)
 
     print("Testing with new processes:")
-    multiProcessLauncher.spawn(shellCommands=["echo sleeping 5 plus 6", "sleep 5", "echo slept 5", "sleep 6", "echo slept 6"], logFileName="sleeper_5and6.log")
-    multiProcessLauncher.spawn(shellCommands="echo sleeping 64 && sleep 64 && echo slept 64", logFileName="sleeper_64.log")
-    multiProcessLauncher.spawn(shellCommands="echo sleeping 41 && sleep 41 && echo slept 41", logFileName="sleeper_41.log")
-    multiProcessLauncher.spawn(shellCommands="echo sleeping 42 && sleep 42 && echo slept 42", logFileName="sleeper_42.log")
-    multiProcessLauncher.spawn(shellCommands="echo sleeping 55 && sleep 55 && echo slept 55", logFileName="sleeper_55.log")
+    multiProcessLauncher.spawn(shellCommands=["echo sleeping 5 plus 6", "sleep 5", "echo slept 5", "sleep 6", "echo slept 6"], optionalEnvSetup="echo \"test: HOME=${HOME}\"", logFileName="sleeper_5and6.log")
+    multiProcessLauncher.spawn(shellCommands="echo sleeping 64 && sleep 64 && echo slept 64", optionalEnvSetup="echo \"test: HOME=${HOME}\"", logFileName="sleeper_64.log")
+    multiProcessLauncher.spawn(shellCommands="echo sleeping 41 && sleep 41 && echo slept 41", optionalEnvSetup="echo \"test: HOME=${HOME}\"", logFileName="sleeper_41.log")
+    multiProcessLauncher.spawn(shellCommands="echo sleeping 42 && sleep 42 && echo slept 42", optionalEnvSetup="echo \"test: HOME=${HOME}\"", logFileName="sleeper_42.log")
+    multiProcessLauncher.spawn(shellCommands="echo sleeping 55 && sleep 55 && echo slept 55", optionalEnvSetup="echo \"test: HOME=${HOME}\"", logFileName="sleeper_55.log")
     multiProcessLauncher.monitorToCompletion()
 
 if __name__ == "__main__":
