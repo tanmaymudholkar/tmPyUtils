@@ -4,11 +4,15 @@ import ROOT
 
 import sys, math, time
 
+WEIGHT_OVERALL = 0.75
+WEIGHT_INSTANTANEOUS = 1.0 - WEIGHT_OVERALL
+
 def toInt(floatValue):
     return int(math.floor(0.5+floatValue))
 
 class tmProgressBar:
     def __init__(self, counterMaxValue=0, progressBarCharacter=">"):
+        self.timeStarted = 0.
         self.timeAtLastCheck = 0.
         self.fractionCompletedAtLastCheck = 0.
         self.counterMaxValue = counterMaxValue
@@ -19,21 +23,30 @@ class tmProgressBar:
             self.formatString = "{n}d".format(n=nDigitsCounterMax)
 
     def initializeTimer(self):
-        self.timeAtLastCheck = time.time()
+        initial_time = time.time()
+        self.timeStarted = initial_time
+        self.timeAtLastCheck = initial_time
         self.fractionCompletedAtLastCheck = 0.
 
     def updateBar(self, fractionCompleted, counterCurrentValue = 0):
         fractionRemaining = 1 - fractionCompleted
         percentCompleted = toInt(fractionCompleted*100.)
         currentTime = time.time()
-        timeElapsed = currentTime - self.timeAtLastCheck
+
+        timeElapsedSinceStart = currentTime - self.timeStarted
+        completionRate_overall = fractionCompleted/timeElapsedSinceStart
+
+        timeElapsedSinceLastCheck = currentTime - self.timeAtLastCheck
         fractionCompletedSinceLastCheck = fractionCompleted - self.fractionCompletedAtLastCheck
-        completionRate = fractionCompletedSinceLastCheck/timeElapsed
+        completionRate_instantaneous = fractionCompletedSinceLastCheck/timeElapsedSinceLastCheck
+
+        completionRate = WEIGHT_OVERALL*completionRate_overall + WEIGHT_INSTANTANEOUS*completionRate_instantaneous
+
+        guess_timeRemaining = 0.
         try:
-            latestEstimateTimeRequired = fractionRemaining/completionRate
+            guess_timeRemaining = fractionRemaining/completionRate
         except ZeroDivisionError:
-            latestEstimateTimeRequired = 0.
-        guess_timeRemaining = latestEstimateTimeRequired - timeElapsed
+            pass
         guess_timeRemainingHoursFloat = math.floor(guess_timeRemaining/3600.)
         guess_timeRemainingHours = toInt(guess_timeRemainingHoursFloat)
         guess_timeRemainingMinutesFloat = math.floor((guess_timeRemaining - 3600.*guess_timeRemainingHoursFloat)/60.)
@@ -47,7 +60,7 @@ class tmProgressBar:
         self.fractionCompletedAtLastCheck = fractionCompleted
 
     def terminate(self):
-        # self.updateBar(1., self.counterMaxValue) # Commented to catch potential bugs with loop exiting before expected end. Side-effect of the commenting is that it makes the bar uglier in the output...
+        # self.updateBar(1., self.counterMaxValue) # Commented to catch potential bugs with loop exiting before expected end. Unfortunately, because this line is commented out, the output file doesn't always have "100% complete" at the end.
         print("")
 
 def tmProgressBarTest():
