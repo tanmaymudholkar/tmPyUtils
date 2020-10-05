@@ -87,3 +87,47 @@ class tmJDLInterface:
                 sys.exit("Flavor needs to be set for lxplus jobs.")
         outputJDL.write("queue 1\n")
         outputJDL.close()
+
+def tmJDLInterfaceTest():
+    outputFolder = raw_input("Enter relative path to test output folder: ")
+    print("Checking output folder:")
+    returnCode = os.system("set -x && mkdir -p {oF} && set +x".format(oF=outputFolder))
+    if (returnCode != 0): sys.exit("ERROR: Unable to check if folder {oF} exists or create it.".format(oF=outputFolder))
+
+    # Step 1: create test script
+    print("Creating test script:")
+    scriptFileHandle = open("{oF}/tmJDLInterfaceTestScript.sh".format(oF=outputFolder), "w")
+    scriptFileHandle.write("#!/bin/bash\n")
+    scriptFileHandle.write("\n")
+    scriptFileHandle.write("echo starting script \n")
+    scriptFileHandle.write("echo sleeping ${1}\n")
+    scriptFileHandle.write("sleep ${1}\n")
+    scriptFileHandle.write("echo slept ${1}\n")
+    scriptFileHandle.close()
+    returnCode = os.system("set -x && chmod +x {oF}/tmJDLInterfaceTestScript.sh && set +x".format(oF=outputFolder))
+    if (returnCode != 0): sys.exit("ERROR: Unable to check if folder {oF} exists or create it.".format(oF=outputFolder))
+    print("Created executable test script.")
+
+    # Step 2: create JDL
+    print("Creating test JDL:")
+    jdlInterface = tmJDLInterface(processName="tmJDLInterfaceTest", scriptPath="tmJDLInterfaceTestScript.sh", outputDirectoryRelativePath=outputFolder)
+    jdlInterface.addScriptArgument("120") # script will sleep for 120 seconds and then exit
+    hostname = os.getenv("HOSTNAME")
+    if ("lxplus" in hostname):
+        jdlInterface.setFlavor("espresso")
+    jdlInterface.writeToFile()
+    print("Wrote test JDL.")
+
+    # Step 3: submit JDL
+    print("Submitting JDL:")
+    returnCode = os.system("set -x && cd {oF} && condor_submit tmJDLInterfaceTest.jdl && cd - && set +x".format(oF=outputFolder))
+    if (returnCode != 0): sys.exit("ERROR: Unable to submit test JDL.")
+    print("Submitted JDL.")
+
+    # Step 4 (for convenience): call "condor_q" once
+    print("Calling condor_q:")
+    returnCode = os.system("set -x && condor_q && set +x")
+    if (returnCode != 0): sys.exit("ERROR: Unable to call condor_q.")
+
+if __name__ == "__main__":
+    tmJDLInterfaceTest()
