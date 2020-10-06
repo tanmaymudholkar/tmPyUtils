@@ -38,6 +38,7 @@ scriptFileHandle.write("cd {CFN}/src && scramv1 b ProjectRename && eval `scramv1
 scriptFileHandle.write("\n")
 scriptFileHandle.write("runTheMatrix.py -l ${1} -i all --ibeos\n")
 scriptFileHandle.write("mv -v ${{1}}* {cwd}/\n".format(cwd=current_working_directory))
+scriptFileHandle.write("mv -v runall-report-step123-.log {cwd}/condor_files/runReport_${{1}}.log\n".format(cwd=current_working_directory))
 scriptFileHandle.write("rm -r {CFN}\n".format(CFN=CMSSWFolderName))
 scriptFileHandle.close()
 subprocess.check_call("set -x && chmod +x condor_files/runMatrixScript.sh && set +x", shell=True, executable="/bin/bash")
@@ -79,7 +80,7 @@ for workflowNumberNamePair in workflowNumberNamePairs:
     jdlInterface.addScriptArgument(workflowNumber)
     hostname = os.getenv("HOSTNAME")
     if ("lxplus" in hostname):
-        jdlInterface.setFlavor("longlunch")
+        jdlInterface.setFlavor("workday")
     jdlInterface.writeToFile()
     print("Wrote JDL for workflow {wid}.".format(wid=workflowID))
 
