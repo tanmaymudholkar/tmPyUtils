@@ -82,7 +82,22 @@ class tmJDLInterface:
             outputJDL.write("{aS}\n".format(aS=argumentsString))
         if (self.habitat_ == "lxplus"):
             if (self.flavor_):
-                outputJDL.write("+JobFlavour = {f}\n".format(f=self.flavor_)) # the "+" is deliberate and needed according to the documentation
+                # Apparently setting the flavor is not enough, some jobs exit with the message "Job removed by SYSTEM_PERIODIC_REMOVE due to wall time exceeded allowed max."
+                # According to the documentation you can also set MaxRuntime manually...
+                max_runtimes_dict = {
+                    "espresso": 20*60, # 20 minutes
+                    "microcentury": 60*60, # 1 hour
+                    "longlunch": 2*60*60, # 2 hours
+                    "workday": 8*60*60, # 8 hours
+                    "tomorrow": 24*60*60, # 1 day
+                    "testmatch": 3*24*60*60, # 3 days -- with the spelling of "flavor" and the reference to cricket, I'm beginning to think this was written by a Britisher...
+                    "nextweek": 7*24*60*60 # 1 week
+                }
+                if (self.flavor_ in max_runtimes_dict):
+                    outputJDL.write("+JobFlavour = {f}\n".format(f=self.flavor_)) # the "+" is deliberate and needed according to the documentation
+                    outputJDL.write("+MaxRuntime = {f}\n".format(f=max_runtimes_dict[self.flavor_])) # the "+" is deliberate and needed according to the documentation
+                else:
+                    sys.exit("Flavor set to {f}, which is currently unsupported.".format(f=self.flavor_))
             else:
                 sys.exit("Flavor needs to be set for lxplus jobs.")
         outputJDL.write("queue 1\n")
