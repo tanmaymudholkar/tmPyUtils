@@ -2,18 +2,19 @@
 
 from __future__ import print_function, division
 import os, sys, argparse, pdb, math, json
-import ROOT
-import tdrstyle, CMS_lumi
 import tmGeneralUtils
-
-ROOT.gROOT.SetBatch(ROOT.kTRUE)
-ROOT.TH1.AddDirectory(ROOT.kFALSE)
 
 # Register command line options
 inputArgumentsParser = argparse.ArgumentParser(description='General tool to generate a CMS-formatted comparison of various histograms; list is read in from an input JSON file whose syntax is explained in the comment immediately following the argument parser setup.')
 inputArgumentsParser.add_argument('--inputFilePath', required=True, help='Path to input JSON.',type=str)
 inputArgumentsParser.add_argument('--outputDirectory', required=True, help='Output directory in which to store the plots.',type=str)
 inputArguments = inputArgumentsParser.parse_args()
+
+# If ROOT is imported before the input arguments parser, the default "help" message is not the right one
+import ROOT
+import tdrstyle, CMS_lumi
+ROOT.gROOT.SetBatch(ROOT.kTRUE)
+ROOT.TH1.AddDirectory(ROOT.kFALSE)
 
 # The input JSON file is formatted as in the following example:
 # {
