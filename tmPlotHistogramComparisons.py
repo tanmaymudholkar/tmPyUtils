@@ -155,10 +155,12 @@ def saveComparisons(target):
     try:
         legend = ROOT.TLegend(float(inputDetails["legend"]["edgeLeft"]), float(inputDetails["legend"]["edgeBottom"]), float(inputDetails["legend"]["edgeRight"]), float(inputDetails["legend"]["edgeTop"]))
     except KeyError:
+        print("Coordinates of edges of legend box not found in input JSON, setting default: 0.4, 0.85, 0.9, 0.9")
         legend = ROOT.TLegend(0.4, 0.85, 0.9, 0.9)
     try:
         legend.SetNColumns(int(0.5 + float(inputDetails["legend"]["nColumns"])))
     except KeyError:
+        print("Number of columns in legend not found in input JSON, setting default: 1")
         legend.SetNColumns(1)
     legend.SetBorderSize(commonLineWidth)
     legend.SetFillStyle(0)
@@ -216,7 +218,11 @@ def saveComparisons(target):
     inputHistogramsScaled[labelWithMaxValue].GetXaxis().SetLabelSize(commonLabelSize)
     inputHistogramsScaled[labelWithMaxValue].GetXaxis().SetTickLength(0)
     inputHistogramsScaled[labelWithMaxValue].GetXaxis().SetLabelOffset(999)
-    inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetTitle("A.U.")
+    try:
+        inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetTitle(inputDetails["yLabel"])
+    except KeyError:
+        print("yLabel not found in input JSON, setting default: \"A.U.\"")
+        inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetTitle("A.U.")
     inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetTitleSize(commonTitleSize)
     inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetLabelSize(commonLabelSize)
     inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetTitleOffset(commonTitleOffset)
@@ -230,11 +236,11 @@ def saveComparisons(target):
     try:
         inputHistogramsScaled[labelWithMaxValue].GetXaxis().SetRangeUser(float(inputDetails["plotXMin"]), float(inputDetails["plotXMax"]))
     except KeyError:
-        pass
+        print("xmin and xmax not found in input JSON, not setting it explicly.")
     try:
         inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetRangeUser(float(inputDetails["plotYMin"]), float(inputDetails["plotYMax"]))
     except KeyError:
-        pass
+        print("ymin and ymax not found in input JSON, not setting it explicly.")
     upperPad.Update()
 
     # Next draw the other histograms
@@ -292,6 +298,7 @@ def saveComparisons(target):
         try:
             ratioHistograms[label].GetYaxis().SetRangeUser(float(inputDetails["ratioYMin"]), float(inputDetails["ratioYMax"]))
         except KeyError:
+            print("min and max values for ratio y-axis not found in input JSON, setting default: (0, 5)")
             ratioHistograms[label].GetYaxis().SetRangeUser(0., 5.)
         plotPropertiesSet = True
 
