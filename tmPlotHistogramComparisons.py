@@ -104,7 +104,7 @@ inputPlots = json.load(inputFileObject)
 inputFileObject.close()
 # print("inputPlots: {iP}, type: {t}".format(iP=inputPlots, t = type(inputPlots)))
 
-colorsDict = {"red": ROOT.kRed+2, "blue": ROOT.kBlue+2, "green": ROOT.kGreen+2, "black": ROOT.kBlack}
+colorsDict = {"red": ROOT.kRed+2, "khaki": ROOT.kYellow+2, "green": ROOT.kGreen+2, "teal": ROOT.kCyan+2, "blue": ROOT.kBlue+2, "violet": ROOT.kMagenta+2, "black": ROOT.kBlack, "grey": ROOT.kWhite+2}
 
 tdrstyle.setTDRStyle()
 
