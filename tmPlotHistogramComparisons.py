@@ -164,28 +164,74 @@ def saveComparisons(target):
         legend.SetNColumns(1)
     legend.SetBorderSize(commonLineWidth)
     legend.SetFillStyle(0)
-    ROOT.gStyle.SetLegendTextSize(0.05)
+    try:
+        ROOT.gStyle.SetLegendTextSize(float(inputDetails["legend"]["textSize"]))
+    except KeyError:
+        print("Legend text size not found in input JSON, setting default: 0.05")
+        ROOT.gStyle.SetLegendTextSize(0.05)
 
     # Get "scaled" versions of the input histograms
     inputHistogramsScaled = {}
-    for label in inputDetails["sources"]:
+    sources_order = [labelWithSpaces.strip() for labelWithSpaces in (inputDetails["order"]).split(",")]
+    if (sources_order[0] != inputDetails["ratioDenominatorLabel"]): sys.exit("ERROR: Code assumes that first element in sources_order is the basis of comparison. Currently, sources_order[0] = {s}, ratioDenominatorLabel = {r}".format(s=sources_order[0], r=inputDetails["ratioDenominatorLabel"]))
+    suppress_histogram = {}
+    for label in sources_order:
         print("Fetching histogram for label: {l}".format(l=label))
-        inputFile = ROOT.TFile.Open(inputDetails["sources"][label]["filePath"], "READ")
-        if ((inputFile.IsZombie() == ROOT.kTRUE) or not(inputFile.IsOpen() == ROOT.kTRUE)):
-            sys.exit("ERROR in opening file: {f}".format(f=inputDetails["sources"][label]["filePath"]))
         inputHistogram = ROOT.TH1F()
-        inputFile.GetObject(str(inputDetails["sources"][label]["histogramName"]), inputHistogram)
-        if (not(inputHistogram)): sys.exit("Unable to find non-null histogram with name {n} in file {f}".format(n=inputDetails["sources"][label]["histogramName"], f=inputDetails["sources"][label]["filePath"]))
+        if ("filePath" in inputDetails["sources"][label]):
+            inputFile = ROOT.TFile.Open(inputDetails["sources"][label]["filePath"], "READ")
+            if ((inputFile.IsZombie() == ROOT.kTRUE) or not(inputFile.IsOpen() == ROOT.kTRUE)):
+                sys.exit("ERROR in opening file: {f}".format(f=inputDetails["sources"][label]["filePath"]))
+            inputFile.GetObject(str(inputDetails["sources"][label]["histogramName"]), inputHistogram)
+            if (not(inputHistogram)): sys.exit("Unable to find non-null histogram with name {n} in file {f}".format(n=inputDetails["sources"][label]["histogramName"], f=inputDetails["sources"][label]["filePath"]))
+            inputFile.Close()
+        elif ("combineSources" in inputDetails["sources"][label]):
+            filePathHistNamePairs = inputDetails["sources"][label]["combineSources"].split(";")
+            firstPairSplit = (filePathHistNamePairs[0]).split(":")
+            firstPair_inputFile = ROOT.TFile.Open(firstPairSplit[0], "READ")
+            if ((firstPair_inputFile.IsZombie() == ROOT.kTRUE) or not(firstPair_inputFile.IsOpen() == ROOT.kTRUE)):
+                sys.exit("ERROR in opening file: {f}".format(f=firstPairSplit[0]))
+            firstPair_inputFile.GetObject(str(firstPairSplit[1]), inputHistogram)
+            firstPair_inputFile.Close()
+            if (not(inputHistogram)): sys.exit("Unable to find non-null histogram with name {n} in file {f}".format(n=firstPairSplit[1], f=firstPairSplit[0]))
+            remainingPairs = filePathHistNamePairs[1:]
+            for pair in remainingPairs:
+                pairSplit = pair.split(":")
+                pair_inputFile = ROOT.TFile.Open(pairSplit[0], "READ")
+                if ((pair_inputFile.IsZombie() == ROOT.kTRUE) or not(pair_inputFile.IsOpen() == ROOT.kTRUE)):
+                    sys.exit("ERROR in opening file: {f}".format(f=pairSplit[0]))
+                inputHistogramTemp = ROOT.TH1F()
+                pair_inputFile.GetObject(str(pairSplit[1]), inputHistogramTemp)
+                if (not(inputHistogramTemp)): sys.exit("Unable to find non-null histogram with name {n} in file {f}".format(n=pairSplit[1], f=pairSplit[0]))
+                inputHistogram.Add(inputHistogramTemp)
+                pair_inputFile.Close()
+        else:
+            sys.exit("ERROR: Expected one of \"filePath\" or \"combineSources\" in input JSON source details for label: {l}, found neither.".format(l=label))
         inputHistogramsScaled[label] = inputHistogram.Clone()
-        inputFile.Close()
         inputHistogramsScaled[label].SetName("{t}_{l}".format(t=target, l=label))
-        scaleFactor = 1.0/inputHistogramsScaled[label].GetBinContent(inputHistogramsScaled[label].GetXaxis().FindFixBin(float(inputDetails["normX"])))
+        scaleFactor = 1.0
+        try:
+            scaleFactor = 1.0/inputHistogramsScaled[label].GetBinContent(inputHistogramsScaled[label].GetXaxis().FindFixBin(float(inputDetails["normX"])))
+        except ZeroDivisionError: # It could be that the normalization bin has 0 events... in that case pick the bin with maximum events.
+            if (label == inputDetails["ratioDenominatorLabel"]):
+                sys.exit("You're out of luck: histogram chosen as the basis of comparison has 0 events in the target normalization bin.")
+            else:
+                maximumBin = inputHistogramsScaled[label].GetMaximumBin()
+                try:
+                    scaleFactor = inputHistogramsScaled[inputDetails["ratioDenominatorLabel"]].GetBinContent(maximumBin)/inputHistogramsScaled[label].GetBinContent(maximumBin)
+                    # inputHistogramsScaled[inputDetails["ratioDenominatorLabel"]] is guaranteed to be set first, so this is OK
+                except ZeroDivisionError:
+                    sys.exit("You're out of luck: histogram with label {l} appears empty".format(l=label))
+        suppress_histogram[label] = False
+        if ((scaleFactor < 0.00000001) or scaleFactor > 10000000.0):
+            suppress_histogram[label] = True
+            print("WARNING: Unexpected scale factor: {s} for label: {l}; not drawing histogram.".format(s=scaleFactor, l=label))
         inputHistogramsScaled[label].Scale(scaleFactor) # Scale such that the value in the normalization bin is 1 for all sources
 
     # Find ratios
     ratioHistograms = {}
-    for label in inputDetails["sources"]:
-        if (label == inputDetails["ratioDenominatorLabel"]): continue
+    for label in sources_order:
+        if ((label == inputDetails["ratioDenominatorLabel"]) or (suppress_histogram[label])): continue
         ratioHistograms[label] = inputHistogramsScaled[label].Clone()
         ratioHistograms[label].SetName("ratio_{t}_{l}_to_{ldenominator}".format(t=target, l=label, ldenominator=inputDetails["ratioDenominatorLabel"]))
         for xCounter in range(1, 1+inputHistogramsScaled[label].GetXaxis().GetNbins()):
@@ -205,7 +251,8 @@ def saveComparisons(target):
     # Find maximum value for scaled histogram and the label that has it
     runningMaxValue = None
     labelWithMaxValue = None
-    for label in inputDetails["sources"]:
+    for label in sources_order:
+        if (suppress_histogram[label]): continue
         currentMax = inputHistogramsScaled[label].GetBinContent(inputHistogramsScaled[label].GetMaximumBin())
         if ((runningMaxValue is None) or (currentMax > runningMaxValue)):
             runningMaxValue = currentMax
@@ -228,11 +275,8 @@ def saveComparisons(target):
     inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetTitleOffset(commonTitleOffset)
 
     inputHistogramsScaled[labelWithMaxValue].Draw("P0")
+    # First "Draw" command is just to initialize the axes etc.; it will get overwritten.
     upperPad.Update()
-    legendEntry = legend.AddEntry(inputHistogramsScaled[labelWithMaxValue], inputDetails["sources"][labelWithMaxValue]["label"])
-    legendEntry.SetLineColor(colorsDict[inputDetails["sources"][labelWithMaxValue]["color"]])
-    legendEntry.SetTextColor(colorsDict[inputDetails["sources"][labelWithMaxValue]["color"]])
-    legendEntry.SetMarkerColor(colorsDict[inputDetails["sources"][labelWithMaxValue]["color"]])
     try:
         inputHistogramsScaled[labelWithMaxValue].GetXaxis().SetRangeUser(float(inputDetails["plotXMin"]), float(inputDetails["plotXMax"]))
     except KeyError:
@@ -243,9 +287,10 @@ def saveComparisons(target):
         print("ymin and ymax not found in input JSON, not setting it explicly.")
     upperPad.Update()
 
-    # Next draw the other histograms
-    for label in inputDetails["sources"]:
-        if (label == labelWithMaxValue): continue
+    # Next draw all histograms with option "SAME"
+    for label in sources_order:
+        # if (label == labelWithMaxValue): continue
+        if (suppress_histogram[label]): continue
         inputHistogramsScaled[label].SetLineColor(colorsDict[inputDetails["sources"][label]["color"]])
         inputHistogramsScaled[label].SetLineWidth(commonLineWidth)
         inputHistogramsScaled[label].Draw("AP0 SAME")
@@ -275,8 +320,8 @@ def saveComparisons(target):
 
     lowerPad.cd()
     plotPropertiesSet = False
-    for label in inputDetails["sources"]:
-        if (label == inputDetails["ratioDenominatorLabel"]): continue
+    for label in sources_order:
+        if ((label == inputDetails["ratioDenominatorLabel"]) or (suppress_histogram[label])): continue
         ratioHistograms[label].SetLineColor(colorsDict[inputDetails["sources"][label]["color"]])
         ratioHistograms[label].SetLineWidth(commonLineWidth)
         if (plotPropertiesSet):
