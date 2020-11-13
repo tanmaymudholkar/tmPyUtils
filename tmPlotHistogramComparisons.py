@@ -209,16 +209,37 @@ def saveComparisons(target):
             sys.exit("ERROR: Expected one of \"filePath\" or \"combineSources\" in input JSON source details for label: {l}, found neither.".format(l=label))
         inputHistogramsScaled[label] = inputHistogram.Clone()
         inputHistogramsScaled[label].SetName("{t}_{l}".format(t=target, l=label))
+        rescaleByBinWidth = False
+        try:
+            rescaleByBinWidth = (inputDetails["rescaleByBinWidth"] == "true")
+        except KeyError:
+            pass
+        if rescaleByBinWidth:
+            for xCounter in range(1, 1+inputHistogramsScaled[label].GetNbinsX()):
+                binContent = inputHistogramsScaled[label].GetBinContent(xCounter)
+                binError = inputHistogramsScaled[label].GetBinError(xCounter)
+                binWidth = inputHistogramsScaled[label].GetBinWidth(xCounter)
+                inputHistogramsScaled[label].SetBinContent(xCounter, binContent/binWidth)
+                inputHistogramsScaled[label].SetBinError(xCounter, binError/binWidth)
         scaleFactor = 1.0
         try:
-            scaleFactor = 1.0/inputHistogramsScaled[label].GetBinContent(inputHistogramsScaled[label].GetXaxis().FindFixBin(float(inputDetails["normX"])))
+            scaleFactor = 1.0/inputHistogramsScaled[label].GetBinContent(inputHistogramsScaled[label].FindFixBin(float(inputDetails["normX"])))
         except ZeroDivisionError: # It could be that the normalization bin has 0 events... in that case pick the bin with maximum events.
             if (label == inputDetails["ratioDenominatorLabel"]):
                 sys.exit("You're out of luck: histogram chosen as the basis of comparison has 0 events in the target normalization bin.")
             else:
-                maximumBin = inputHistogramsScaled[label].GetMaximumBin()
+                maxBinContent = None
+                indexWithMaxBinContent = None
+                for xCounter in range(1, 1+inputHistogramsScaled[label].GetNbinsX()):
+                    binContent = inputHistogramsScaled[label].GetBinContent(xCounter)
+                    if (indexWithMaxBinContent is None):
+                        maxBinContent = binContent
+                        indexWithMaxBinContent = xCounter
+                    if (binContent > maxBinContent):
+                        maxBinContent = binContent
+                        indexWithMaxBinContent = xCounter
                 try:
-                    scaleFactor = inputHistogramsScaled[inputDetails["ratioDenominatorLabel"]].GetBinContent(maximumBin)/inputHistogramsScaled[label].GetBinContent(maximumBin)
+                    scaleFactor = inputHistogramsScaled[inputDetails["ratioDenominatorLabel"]].GetBinContent(indexWithMaxBinContent)/inputHistogramsScaled[label].GetBinContent(indexWithMaxBinContent)
                     # inputHistogramsScaled[inputDetails["ratioDenominatorLabel"]] is guaranteed to be set first, so this is OK
                 except ZeroDivisionError:
                     sys.exit("You're out of luck: histogram with label {l} appears empty".format(l=label))
@@ -226,15 +247,27 @@ def saveComparisons(target):
         if ((scaleFactor < 0.00000001) or scaleFactor > 10000000.0):
             suppress_histogram[label] = True
             print("WARNING: Unexpected scale factor: {s} for label: {l}; not drawing histogram.".format(s=scaleFactor, l=label))
-        inputHistogramsScaled[label].Scale(scaleFactor) # Scale such that the value in the normalization bin is 1 for all sources
-
-    # Find ratios
+        if (not(suppress_histogram[label])): inputHistogramsScaled[label].Scale(scaleFactor) # Scale such that the value in the normalization bin is 1 for all sources
+    # Find ratios and, if requested, save them in a file
+    saveRatiosToFile = False
+    try:
+        saveRatiosToFile = (inputDetails["saveRatiosToFile"] == "true")
+    except KeyError:
+        pass
     ratioHistograms = {}
+    fractionalUncertaintiesList = []
     for label in sources_order:
         if ((label == inputDetails["ratioDenominatorLabel"]) or (suppress_histogram[label])): continue
         ratioHistograms[label] = inputHistogramsScaled[label].Clone()
         ratioHistograms[label].SetName("ratio_{t}_{l}_to_{ldenominator}".format(t=target, l=label, ldenominator=inputDetails["ratioDenominatorLabel"]))
-        for xCounter in range(1, 1+inputHistogramsScaled[label].GetXaxis().GetNbins()):
+        for xCounter in range(1, 1+inputHistogramsScaled[label].GetNbinsX()):
+            minFractionalError = 0.
+            fractionalErrorDown = 0.
+            fractionalErrorUp = 0.
+            if saveRatiosToFile:
+                minFractionalError = float(inputDetails["minFractionalError"])
+                fractionalErrorDown = -1.0*minFractionalError
+                fractionalErrorUp = minFractionalError
             try:
                 numerator = inputHistogramsScaled[label].GetBinContent(xCounter)
                 numeratorError = inputHistogramsScaled[label].GetBinError(xCounter)
@@ -244,52 +277,59 @@ def saveComparisons(target):
                 ratioError = ratio*math.sqrt(pow(numeratorError/numerator, 2) + pow(denominatorError/denominator, 2))
                 ratioHistograms[label].SetBinContent(xCounter, ratio)
                 ratioHistograms[label].SetBinError(xCounter, ratioError)
+                if saveRatiosToFile:
+                    fractionalError = 0.
+                    if (ratio < (1.0 - minFractionalError)):
+                        fractionalErrorDown = ratio - 1.0 # lnN (1+delta) = ratio
+                        fractionalErrorUp = minFractionalError # lnN (1+delta) = 1 + minFractionalError
+                    elif (ratio < (1.0 + minFractionalError)):
+                        fractionalErrorDown = -1.0*minFractionalError # lnN (1+delta) = 1 - minFractionalError
+                        fractionalErrorUp = minFractionalError # lnN (1+delta) = 1 + minFractionalError
+                    else: # ratio > (1 + minFractionalError)
+                        fractionalErrorDown = -1.0*minFractionalError # lnN (1+delta) = 1 - minFractionalError
+                        fractionalErrorUp = ratio - 1.0 # lnN (1+delta) = ratio
             except ZeroDivisionError:
                 ratioHistograms[label].SetBinContent(xCounter, 1.)
                 ratioHistograms[label].SetBinError(xCounter, 0.)
+                # default: factor-of-5 in both directions
+                fractionalErrorDown = -0.8
+                fractionalErrorUp = 4.0
+            if saveRatiosToFile:
+                fractionalUncertaintiesList.append(tuple(["float", (inputDetails["saveRatiosPatternDown"]).format(i=xCounter, l=label), fractionalErrorDown]))
+                fractionalUncertaintiesList.append(tuple(["float", (inputDetails["saveRatiosPatternUp"]).format(i=xCounter, l=label), fractionalErrorUp]))
+    if saveRatiosToFile: tmGeneralUtils.writeConfigurationParametersToFile(configurationParametersList=fractionalUncertaintiesList, outputFilePath=inputDetails["saveRatiosFile"])
 
-    # Find maximum value for scaled histogram and the label that has it
-    runningMaxValue = None
-    labelWithMaxValue = None
-    for label in sources_order:
-        if (suppress_histogram[label]): continue
-        currentMax = inputHistogramsScaled[label].GetBinContent(inputHistogramsScaled[label].GetMaximumBin())
-        if ((runningMaxValue is None) or (currentMax > runningMaxValue)):
-            runningMaxValue = currentMax
-            labelWithMaxValue = label
-
-    # First draw the histogram with the max bin
-    inputHistogramsScaled[labelWithMaxValue].SetLineColor(colorsDict[inputDetails["sources"][labelWithMaxValue]["color"]])
-    inputHistogramsScaled[labelWithMaxValue].SetLineWidth(commonLineWidth)
-    inputHistogramsScaled[labelWithMaxValue].GetXaxis().SetTitleSize(commonTitleSize)
-    inputHistogramsScaled[labelWithMaxValue].GetXaxis().SetLabelSize(commonLabelSize)
-    inputHistogramsScaled[labelWithMaxValue].GetXaxis().SetTickLength(0)
-    inputHistogramsScaled[labelWithMaxValue].GetXaxis().SetLabelOffset(999)
+    # Draw the first histogram
+    inputHistogramsScaled[sources_order[0]].SetLineColor(colorsDict[inputDetails["sources"][sources_order[0]]["color"]])
+    inputHistogramsScaled[sources_order[0]].SetLineWidth(commonLineWidth)
+    inputHistogramsScaled[sources_order[0]].Draw("P0")
+    # First "Draw" command is just to initialize the axes etc.; it will get overwritten.
+    inputHistogramsScaled[sources_order[0]].GetXaxis().SetTitleSize(commonTitleSize)
+    inputHistogramsScaled[sources_order[0]].GetXaxis().SetLabelSize(commonLabelSize)
+    inputHistogramsScaled[sources_order[0]].GetXaxis().SetTickLength(0)
+    inputHistogramsScaled[sources_order[0]].GetXaxis().SetLabelOffset(999)
     try:
-        inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetTitle(inputDetails["yLabel"])
+        inputHistogramsScaled[sources_order[0]].GetYaxis().SetTitle(inputDetails["yLabel"])
     except KeyError:
         print("yLabel not found in input JSON, setting default: \"A.U.\"")
-        inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetTitle("A.U.")
-    inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetTitleSize(commonTitleSize)
-    inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetLabelSize(commonLabelSize)
-    inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetTitleOffset(commonTitleOffset)
+        inputHistogramsScaled[sources_order[0]].GetYaxis().SetTitle("A.U.")
+    inputHistogramsScaled[sources_order[0]].GetYaxis().SetTitleSize(commonTitleSize)
+    inputHistogramsScaled[sources_order[0]].GetYaxis().SetLabelSize(commonLabelSize)
+    inputHistogramsScaled[sources_order[0]].GetYaxis().SetTitleOffset(commonTitleOffset)
 
-    inputHistogramsScaled[labelWithMaxValue].Draw("P0")
-    # First "Draw" command is just to initialize the axes etc.; it will get overwritten.
     upperPad.Update()
     try:
-        inputHistogramsScaled[labelWithMaxValue].GetXaxis().SetRangeUser(float(inputDetails["plotXMin"]), float(inputDetails["plotXMax"]))
+        inputHistogramsScaled[sources_order[0]].GetXaxis().SetRangeUser(float(inputDetails["plotXMin"]), float(inputDetails["plotXMax"]))
     except KeyError:
         print("xmin and xmax not found in input JSON, not setting it explicly.")
     try:
-        inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetRangeUser(float(inputDetails["plotYMin"]), float(inputDetails["plotYMax"]))
+        inputHistogramsScaled[sources_order[0]].GetYaxis().SetRangeUser(float(inputDetails["plotYMin"]), float(inputDetails["plotYMax"]))
     except KeyError:
         print("ymin and ymax not found in input JSON, not setting it explicly.")
     upperPad.Update()
 
     # Next draw all histograms with option "SAME"
-    for label in sources_order:
-        # if (label == labelWithMaxValue): continue
+    for label in sources_order[1:]:
         if (suppress_histogram[label]): continue
         inputHistogramsScaled[label].SetLineColor(colorsDict[inputDetails["sources"][label]["color"]])
         inputHistogramsScaled[label].SetLineWidth(commonLineWidth)
@@ -313,9 +353,9 @@ def saveComparisons(target):
     frame = upperPad.GetFrame()
     frame.Draw()
 
-    yTitleSize_upper = inputHistogramsScaled[labelWithMaxValue].GetYaxis().GetTitleSize()
-    yLabelSize_upper = inputHistogramsScaled[labelWithMaxValue].GetYaxis().GetLabelSize()
-    yTickLength_upper = inputHistogramsScaled[labelWithMaxValue].GetYaxis().GetTickLength()
+    yTitleSize_upper = inputHistogramsScaled[sources_order[0]].GetYaxis().GetTitleSize()
+    yLabelSize_upper = inputHistogramsScaled[sources_order[0]].GetYaxis().GetLabelSize()
+    yTickLength_upper = inputHistogramsScaled[sources_order[0]].GetYaxis().GetTickLength()
     upperPad.Update()
 
     lowerPad.cd()
