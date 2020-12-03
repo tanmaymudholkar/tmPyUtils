@@ -228,13 +228,28 @@ def saveComparisons(target):
             print("WARNING: Unexpected scale factor: {s} for label: {l}; not drawing histogram.".format(s=scaleFactor, l=label))
         inputHistogramsScaled[label].Scale(scaleFactor) # Scale such that the value in the normalization bin is 1 for all sources
 
+    # Find ratios and, if requested, save them in a file
+    saveRatiosToFile = False
+    try:
+        saveRatiosToFile = (inputDetails["saveRatiosToFile"] == "true")
+    except KeyError:
+        pass
+
     # Find ratios
     ratioHistograms = {}
+    fractionalUncertaintiesList = []
     for label in sources_order:
         if ((label == inputDetails["ratioDenominatorLabel"]) or (suppress_histogram[label])): continue
         ratioHistograms[label] = inputHistogramsScaled[label].Clone()
         ratioHistograms[label].SetName("ratio_{t}_{l}_to_{ldenominator}".format(t=target, l=label, ldenominator=inputDetails["ratioDenominatorLabel"]))
         for xCounter in range(1, 1+inputHistogramsScaled[label].GetXaxis().GetNbins()):
+            minFractionalError = 0.
+            fractionalErrorDown = 0.
+            fractionalErrorUp = 0.
+            if saveRatiosToFile:
+                minFractionalError = float(inputDetails["minFractionalError"])
+                fractionalErrorDown = -1.0*minFractionalError
+                fractionalErrorUp = minFractionalError
             try:
                 numerator = inputHistogramsScaled[label].GetBinContent(xCounter)
                 numeratorError = inputHistogramsScaled[label].GetBinError(xCounter)
@@ -244,9 +259,26 @@ def saveComparisons(target):
                 ratioError = ratio*math.sqrt(pow(numeratorError/numerator, 2) + pow(denominatorError/denominator, 2))
                 ratioHistograms[label].SetBinContent(xCounter, ratio)
                 ratioHistograms[label].SetBinError(xCounter, ratioError)
+                if saveRatiosToFile:
+                    if (ratio < (1.0 - minFractionalError)):
+                        fractionalErrorDown = ratio - 1.0 # lnN (1+delta) = ratio
+                        fractionalErrorUp = minFractionalError # lnN (1+delta) = 1 + minFractionalError
+                    elif (ratio < (1.0 + minFractionalError)):
+                        fractionalErrorDown = -1.0*minFractionalError # lnN (1+delta) = 1 - minFractionalError
+                        fractionalErrorUp = minFractionalError # lnN (1+delta) = 1 + minFractionalError
+                    else: # ratio > (1 + minFractionalError)
+                        fractionalErrorDown = -1.0*minFractionalError # lnN (1+delta) = 1 - minFractionalError
+                        fractionalErrorUp = ratio - 1.0 # lnN (1+delta) = ratio
             except ZeroDivisionError:
                 ratioHistograms[label].SetBinContent(xCounter, 1.)
                 ratioHistograms[label].SetBinError(xCounter, 0.)
+                # default: factor-of-5 in both directions
+                fractionalErrorDown = -0.8
+                fractionalErrorUp = 4.0
+            if saveRatiosToFile:
+                fractionalUncertaintiesList.append(tuple(["float", (inputDetails["saveRatiosPatternDown"]).format(i=xCounter, l=label), fractionalErrorDown]))
+                fractionalUncertaintiesList.append(tuple(["float", (inputDetails["saveRatiosPatternUp"]).format(i=xCounter, l=label), fractionalErrorUp]))
+    if saveRatiosToFile: tmGeneralUtils.writeConfigurationParametersToFile(configurationParametersList=fractionalUncertaintiesList, outputFilePath=inputDetails["saveRatiosFile"])
 
     # Find maximum value for scaled histogram and the label that has it
     runningMaxValue = None
@@ -362,3 +394,5 @@ def saveComparisons(target):
 
 for target in inputPlots["targets"]:
     saveComparisons(target)
+
+print("Done!")
