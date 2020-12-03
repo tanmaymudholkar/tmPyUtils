@@ -8,6 +8,7 @@ import tmGeneralUtils
 inputArgumentsParser = argparse.ArgumentParser(description='General tool to generate a CMS-formatted comparison of various histograms; list is read in from an input JSON file whose syntax is explained in the comment immediately following the argument parser setup.')
 inputArgumentsParser.add_argument('--inputFilePath', required=True, help='Path to input JSON.',type=str)
 inputArgumentsParser.add_argument('--outputDirectory', required=True, help='Output directory in which to store the plots.',type=str)
+inputArgumentsParser.add_argument('--printTemplate', action='store_true', help="Only print template for a skeleton JSON file and exit.")
 inputArguments = inputArgumentsParser.parse_args()
 
 # If ROOT is imported before the input arguments parser, the default "help" message is not the right one
@@ -16,88 +17,91 @@ import tdrstyle, CMS_lumi
 ROOT.gROOT.SetBatch(ROOT.kTRUE)
 ROOT.TH1.AddDirectory(ROOT.kFALSE)
 
-# The input JSON file is formatted as in the following example:
-# {
-#     "targets": {
-#         "histograms_2Jets": { # Each set of comparisons to produce is given a label (aka a "target" in the following code). Here we have two sets of comparisons, with the labels "histograms_2Jets" and "histograms_3Jets".
-#             "outputPath": "STHistograms_2Jets.pdf", # path to output file
-#             "title": "ST Histograms, 2 Jets", # title, currently not working because it overlaps the CMS logo
-#             "xLabel": "S_{T} (GeV)", # x-axis label
-#             "yLabel": "A.U.", # y-axis label
-#             "logY": "true", # whether or not to set log scale for y-axis
-#             "drawCMSLumi": "true", # whether or not to write luminosity (should generally be true for data, false for MC)
-#             "legend": {
-#                 "nColumns": "3" # number of columns in legend
-#                 # optional, not included in this example: edgeLeft, edgeBottom, edgeRight, edgeTop, which control the edges of the legend
-#             },
-#             "normX": "1250.0", # the x value at which to scale the bin contents of all histograms to 1
-#             "plotXMin": "1200.0", # x range min to plot
-#             "plotXMax": "3500.0", # x range max to plot
-#             "plotYMin": "0.001", # y range min to plot
-#             "plotYMax": "2.0", # y range max to plot
-#             "ratioDenominatorLabel": "signal", # label whose histogram is to be considered as the denominator while taking the ratio
-#             "ratioYMin": "-0.5", # y range min of ratio plot
-#             "ratioYMax": "3.5", # y range max of ratio plot
-#             "sources": {
-#                 "signal": { # within each set of comparisons to produce, each histogram is given a label. Here we have three histograms in this comparison, with the labels "signal", "signal_loose", and "control".
-#                     "filePath": "/uscms/home/tmudholk/nobackup/analysisAreas/analysis/publicationPlots/signal_STComparisons_savedSTShapes.root", # path to file containing histogram
-#                     "histogramName": "h_STDistribution_total_2Jets", # name of histogram within file
-#                     "color": "blue", # color to use for this histogram.
-#                     "label": "signal" # what to use as a label in the legend
-#                 },
-#                 "signal_loose": { # same syntax as above
-#                     "filePath": "/uscms/home/tmudholk/nobackup/analysisAreas/analysis/publicationPlots/signal_loose_STComparisons_savedSTShapes.root",
-#                     "histogramName": "h_STDistribution_total_2Jets",
-#                     "color": "red",
-#                     "label": "loose signal"
-#                 },
-#                 "control": { # same syntax as above
-#                     "filePath": "/uscms/home/tmudholk/nobackup/analysisAreas/analysis/publicationPlots/control_STComparisons_savedSTShapes.root",
-#                     "histogramName": "h_STDistribution_total_2Jets",
-#                     "color": "green",
-#                     "label": "control"
-#                 }
-#             }
-#         },
-#         "histograms_3Jets": { # same syntax as above
-#             "outputPath": "STHistograms_3Jets.pdf",
-#             "title": "ST Histograms, 3 Jets",
-#             "xLabel": "S_{T} (GeV)",
-#             "yLabel": "A.U.",
-#             "logY": "true",
-#             "drawCMSLumi": "true",
-#             "legend": {
-#                 "nColumns": "3"
-#             },
-#             "normX": "1250.0",
-#             "plotXMin": "1200.0",
-#             "plotXMax": "3500.0",
-#             "plotYMin": "0.001",
-#             "plotYMax": "2.0",
-#             "ratioDenominatorLabel": "signal",
-#             "ratioYMin": "-0.5",
-#             "ratioYMax": "3.5",
-#             "sources": {
-#                 "signal": {
-#                     "filePath": "/uscms/home/tmudholk/nobackup/analysisAreas/analysis/publicationPlots/signal_STComparisons_savedSTShapes.root",
-#                     "histogramName": "h_STDistribution_total_3Jets",
-#                     "color": "blue"
-#                 },
-#                 "signal_loose": {
-#                     "filePath": "/uscms/home/tmudholk/nobackup/analysisAreas/analysis/publicationPlots/signal_loose_STComparisons_savedSTShapes.root",
-#                     "histogramName": "h_STDistribution_total_3Jets",
-#                     "color": "red"
-#                 },
-#                 "control": {
-#                     "filePath": "/uscms/home/tmudholk/nobackup/analysisAreas/analysis/publicationPlots/control_STComparisons_savedSTShapes.root",
-#                     "histogramName": "h_STDistribution_total_3Jets",
-#                     "color": "green"
-#                 }
-#             }
-#         }
-#     }
-# }
-
+if inputArguments.printTemplate:
+    print("Template: ")
+    print("""
+{
+    "targets": {
+        "histograms_2Jets": { # Each set of comparisons to produce is given a label (aka a "target" in the following code). Here we have two sets of comparisons, with the labels "histograms_2Jets" and "histograms_3Jets".
+            "outputPath": "STHistograms_2Jets.pdf", # path to output file
+            "title": "ST Histograms, 2 Jets", # title, currently not working because it overlaps the CMS logo
+            "xLabel": "S_{T} (GeV)", # x-axis label
+            "yLabel": "A.U.", # y-axis label
+            "logY": "true", # whether or not to set log scale for y-axis
+            "drawCMSLumi": "true", # whether or not to write luminosity (should generally be true for data, false for MC)
+            "legend": {
+                "nColumns": "3" # number of columns in legend
+                # optional, not included in this example: edgeLeft, edgeBottom, edgeRight, edgeTop, which control the edges of the legend
+            },
+            "normX": "1250.0", # the x value at which to scale the bin contents of all histograms to 1
+            "plotXMin": "1200.0", # x range min to plot
+            "plotXMax": "3500.0", # x range max to plot
+            "plotYMin": "0.001", # y range min to plot
+            "plotYMax": "2.0", # y range max to plot
+            "ratioDenominatorLabel": "signal", # label whose histogram is to be considered as the denominator while taking the ratio
+            "ratioYMin": "-0.5", # y range min of ratio plot
+            "ratioYMax": "3.5", # y range max of ratio plot
+            "sources": {
+                "signal": { # within each set of comparisons to produce, each histogram is given a label. Here we have three histograms in this comparison, with the labels "signal", "signal_loose", and "control".
+                    "filePath": "/uscms/home/tmudholk/nobackup/analysisAreas/analysis/publicationPlots/signal_STComparisons_savedSTShapes.root", # path to file containing histogram
+                    "histogramName": "h_STDistribution_total_2Jets", # name of histogram within file
+                    "color": "blue", # color to use for this histogram.
+                    "label": "signal" # what to use as a label in the legend
+                },
+                "signal_loose": { # same syntax as above
+                    "filePath": "/uscms/home/tmudholk/nobackup/analysisAreas/analysis/publicationPlots/signal_loose_STComparisons_savedSTShapes.root",
+                    "histogramName": "h_STDistribution_total_2Jets",
+                    "color": "red",
+                    "label": "loose signal"
+                },
+                "control": { # same syntax as above
+                    "filePath": "/uscms/home/tmudholk/nobackup/analysisAreas/analysis/publicationPlots/control_STComparisons_savedSTShapes.root",
+                    "histogramName": "h_STDistribution_total_2Jets",
+                    "color": "green",
+                    "label": "control"
+                }
+            }
+        },
+        "histograms_3Jets": { # same syntax as above
+            "outputPath": "STHistograms_3Jets.pdf",
+            "title": "ST Histograms, 3 Jets",
+            "xLabel": "S_{T} (GeV)",
+            "yLabel": "A.U.",
+            "logY": "true",
+            "drawCMSLumi": "true",
+            "legend": {
+                "nColumns": "3"
+            },
+            "normX": "1250.0",
+            "plotXMin": "1200.0",
+            "plotXMax": "3500.0",
+            "plotYMin": "0.001",
+            "plotYMax": "2.0",
+            "ratioDenominatorLabel": "signal",
+            "ratioYMin": "-0.5",
+            "ratioYMax": "3.5",
+            "sources": {
+                "signal": {
+                    "filePath": "/uscms/home/tmudholk/nobackup/analysisAreas/analysis/publicationPlots/signal_STComparisons_savedSTShapes.root",
+                    "histogramName": "h_STDistribution_total_3Jets",
+                    "color": "blue"
+                },
+                "signal_loose": {
+                    "filePath": "/uscms/home/tmudholk/nobackup/analysisAreas/analysis/publicationPlots/signal_loose_STComparisons_savedSTShapes.root",
+                    "histogramName": "h_STDistribution_total_3Jets",
+                    "color": "red"
+                },
+                "control": {
+                    "filePath": "/uscms/home/tmudholk/nobackup/analysisAreas/analysis/publicationPlots/control_STComparisons_savedSTShapes.root",
+                    "histogramName": "h_STDistribution_total_3Jets",
+                    "color": "green"
+                }
+            }
+        }
+    }
+}
+    """)
+    sys.exit(0)
 
 inputFileObject = open(inputArguments.inputFilePath, 'r')
 inputPlots = json.load(inputFileObject)
