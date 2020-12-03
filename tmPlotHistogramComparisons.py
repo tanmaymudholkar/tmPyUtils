@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 
 from __future__ import print_function, division
-import os, sys, argparse, pdb, math, json
+import os, sys, argparse, pdb, math, json, subprocess
 import tmGeneralUtils
 
 # Register command line options
 inputArgumentsParser = argparse.ArgumentParser(description='General tool to generate a CMS-formatted comparison of various histograms; list is read in from an input JSON file whose syntax is explained in the comment immediately following the argument parser setup.')
 inputArgumentsParser.add_argument('--inputFilePath', required=True, help='Path to input JSON.',type=str)
-inputArgumentsParser.add_argument('--outputDirectory', required=True, help='Output directory in which to store the plots.',type=str)
 inputArgumentsParser.add_argument('--printTemplate', action='store_true', help="Only print template for a skeleton JSON file and exit.")
 inputArguments = inputArgumentsParser.parse_args()
 
@@ -107,6 +106,9 @@ inputFileObject = open(inputArguments.inputFilePath, 'r')
 inputPlots = json.load(inputFileObject)
 inputFileObject.close()
 # print("inputPlots: {iP}, type: {t}".format(iP=inputPlots, t = type(inputPlots)))
+
+outputDirectory = str(inputTargets["outputDirectory"])
+if not(os.path.isdir(outputDirectory)): subprocess.check_call("mkdir -p {oD}".format(oD=outputDirectory), shell=True, executable="/bin/bash")
 
 colorsDict = {"red": ROOT.kRed+2, "khaki": ROOT.kYellow+2, "green": ROOT.kGreen+2, "teal": ROOT.kCyan+2, "blue": ROOT.kBlue+2, "violet": ROOT.kMagenta+2, "black": ROOT.kBlack, "grey": ROOT.kWhite+2}
 
@@ -394,7 +396,7 @@ def saveComparisons(target):
     frame.Draw()
 
     canvas.Update()
-    canvas.SaveAs("{oD}/{oP}".format(oD=inputArguments.outputDirectory, oP=inputDetails["outputPath"]))
+    canvas.SaveAs("{oD}/{oP}".format(outputDirectory, oP=inputDetails["outputPath"]))
 
 for target in inputPlots["targets"]:
     saveComparisons(target)
