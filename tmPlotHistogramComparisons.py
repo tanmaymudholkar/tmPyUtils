@@ -11,12 +11,6 @@ inputArgumentsParser.add_argument('--userString', default="", help='The set of c
 inputArgumentsParser.add_argument('--printTemplate', action='store_true', help="Only print template for a skeleton JSON file and exit.")
 inputArguments = inputArgumentsParser.parse_args()
 
-# If ROOT is imported before the input arguments parser, the default "help" message is not the right one
-import ROOT
-import tdrstyle, CMS_lumi
-ROOT.gROOT.SetBatch(ROOT.kTRUE)
-ROOT.TH1.AddDirectory(ROOT.kFALSE)
-
 def getFormattedInputData(rawSource):
     return ((str(rawSource)).format(uS=inputArguments.userString))
 
@@ -106,32 +100,29 @@ if inputArguments.printTemplate:
     """)
     sys.exit(0)
 
-inputFileObject = open(inputArguments.inputFilePath, 'r')
-inputPlots = json.load(inputFileObject)
-inputFileObject.close()
-# print("inputPlots: {iP}, type: {t}".format(iP=inputPlots, t = type(inputPlots)))
-
-outputDirectory = getFormattedInputData(inputPlots["outputDirectory"])
-if not(os.path.isdir(outputDirectory)): subprocess.check_call("mkdir -p {oD}".format(oD=outputDirectory), shell=True, executable="/bin/bash")
-
-colorsDict = {"red": ROOT.kRed+2, "khaki": ROOT.kYellow+2, "green": ROOT.kGreen+2, "teal": ROOT.kCyan+2, "blue": ROOT.kBlue+2, "violet": ROOT.kMagenta+2, "black": ROOT.kBlack, "grey": ROOT.kWhite+2}
-
-tdrstyle.setTDRStyle()
-
-commonTitleOffset = 0.7
-commonLineWidth = 3
-commonTitleSize = 0.06
-commonLabelSize = 0.05
-HEIGHT_REF = 600
-WIDTH_REF = 800
-WIDTH = WIDTH_REF
-HEIGHT  = HEIGHT_REF
-TOP = 0.08*HEIGHT_REF
-BOTTOM = 0.12*HEIGHT_REF
-LEFT = 0.12*WIDTH_REF
-RIGHT = 0.04*WIDTH_REF
-
 def saveComparisons(target):
+    import ROOT
+    import tdrstyle, CMS_lumi
+    ROOT.gROOT.SetBatch(ROOT.kTRUE)
+    ROOT.TH1.AddDirectory(ROOT.kFALSE)
+
+    colorsDict = {"red": ROOT.kRed+2, "khaki": ROOT.kYellow+2, "green": ROOT.kGreen+2, "teal": ROOT.kCyan+2, "blue": ROOT.kBlue+2, "violet": ROOT.kMagenta+2, "black": ROOT.kBlack, "grey": ROOT.kWhite+2}
+
+    tdrstyle.setTDRStyle()
+
+    commonTitleOffset = 0.7
+    commonLineWidth = 3
+    commonTitleSize = 0.06
+    commonLabelSize = 0.05
+    HEIGHT_REF = 600
+    WIDTH_REF = 800
+    WIDTH = WIDTH_REF
+    HEIGHT  = HEIGHT_REF
+    TOP = 0.08*HEIGHT_REF
+    BOTTOM = 0.12*HEIGHT_REF
+    LEFT = 0.12*WIDTH_REF
+    RIGHT = 0.04*WIDTH_REF
+
     print("Saving comparisons for target: {t}".format(t=target))
     inputDetails = inputPlots["targets"][target]
 
@@ -401,6 +392,16 @@ def saveComparisons(target):
 
     canvas.Update()
     canvas.SaveAs("{oD}/{oP}".format(oD=outputDirectory, oP=str(inputDetails["outputPath"])))
+
+    del ROOT, tdrstyle, CMS_lumi
+
+inputFileObject = open(inputArguments.inputFilePath, 'r')
+inputPlots = json.load(inputFileObject)
+inputFileObject.close()
+# print("inputPlots: {iP}, type: {t}".format(iP=inputPlots, t = type(inputPlots)))
+
+outputDirectory = getFormattedInputData(inputPlots["outputDirectory"])
+if not(os.path.isdir(outputDirectory)): subprocess.check_call("mkdir -p {oD}".format(oD=outputDirectory), shell=True, executable="/bin/bash")
 
 for target in inputPlots["targets"]:
     saveComparisons(target)
