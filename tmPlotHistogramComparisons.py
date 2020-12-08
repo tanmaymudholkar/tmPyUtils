@@ -7,6 +7,7 @@ import tmGeneralUtils
 # Register command line options
 inputArgumentsParser = argparse.ArgumentParser(description='General tool to generate a CMS-formatted comparison of various histograms; list is read in from an input JSON file whose syntax is explained in the comment immediately following the argument parser setup.')
 inputArgumentsParser.add_argument('--inputFilePath', required=True, help='Path to input JSON.',type=str)
+inputArgumentsParser.add_argument('--userString', default="", help='The set of characters \"{uS}\" in the input JSON is replaced with the value of this argument.',type=str)
 inputArgumentsParser.add_argument('--printTemplate', action='store_true', help="Only print template for a skeleton JSON file and exit.")
 inputArguments = inputArgumentsParser.parse_args()
 
@@ -15,6 +16,9 @@ import ROOT
 import tdrstyle, CMS_lumi
 ROOT.gROOT.SetBatch(ROOT.kTRUE)
 ROOT.TH1.AddDirectory(ROOT.kFALSE)
+
+def getFormattedInputData(rawSource):
+    return ((str(rawSource)).format(uS=inputArguments.userString))
 
 if inputArguments.printTemplate:
     print("Template: ")
@@ -107,7 +111,7 @@ inputPlots = json.load(inputFileObject)
 inputFileObject.close()
 # print("inputPlots: {iP}, type: {t}".format(iP=inputPlots, t = type(inputPlots)))
 
-outputDirectory = str(inputTargets["outputDirectory"])
+outputDirectory = getFormattedInputData(inputPlots["outputDirectory"])
 if not(os.path.isdir(outputDirectory)): subprocess.check_call("mkdir -p {oD}".format(oD=outputDirectory), shell=True, executable="/bin/bash")
 
 colorsDict = {"red": ROOT.kRed+2, "khaki": ROOT.kYellow+2, "green": ROOT.kGreen+2, "teal": ROOT.kCyan+2, "blue": ROOT.kBlue+2, "violet": ROOT.kMagenta+2, "black": ROOT.kBlack, "grey": ROOT.kWhite+2}
@@ -154,45 +158,45 @@ def saveComparisons(target):
     lowerPad.Draw()
 
     upperPad.cd()
-    if (inputDetails["logY"] == "true"):
+    if (str(inputDetails["logY"]) == "true"):
         upperPad.SetLogy()
 
     legend = None
     try:
-        legend = ROOT.TLegend(float(inputDetails["legend"]["edgeLeft"]), float(inputDetails["legend"]["edgeBottom"]), float(inputDetails["legend"]["edgeRight"]), float(inputDetails["legend"]["edgeTop"]))
+        legend = ROOT.TLegend(float(str(inputDetails["legend"]["edgeLeft"])), float(str(inputDetails["legend"]["edgeBottom"])), float(str(inputDetails["legend"]["edgeRight"])), float(str(inputDetails["legend"]["edgeTop"])))
     except KeyError:
         print("Coordinates of edges of legend box not found in input JSON, setting default: 0.4, 0.85, 0.9, 0.9")
         legend = ROOT.TLegend(0.4, 0.85, 0.9, 0.9)
     try:
-        legend.SetNColumns(int(0.5 + float(inputDetails["legend"]["nColumns"])))
+        legend.SetNColumns(int(0.5 + float(str(inputDetails["legend"]["nColumns"]))))
     except KeyError:
         print("Number of columns in legend not found in input JSON, setting default: 1")
         legend.SetNColumns(1)
     legend.SetBorderSize(commonLineWidth)
     legend.SetFillStyle(0)
     try:
-        ROOT.gStyle.SetLegendTextSize(float(inputDetails["legend"]["textSize"]))
+        ROOT.gStyle.SetLegendTextSize(float(str(inputDetails["legend"]["textSize"])))
     except KeyError:
         print("Legend text size not found in input JSON, setting default: 0.05")
         ROOT.gStyle.SetLegendTextSize(0.05)
 
     # Get "scaled" versions of the input histograms
     inputHistogramsScaled = {}
-    sources_order = [labelWithSpaces.strip() for labelWithSpaces in (inputDetails["order"]).split(",")]
-    if (sources_order[0] != inputDetails["ratioDenominatorLabel"]): sys.exit("ERROR: Code assumes that first element in sources_order is the basis of comparison. Currently, sources_order[0] = {s}, ratioDenominatorLabel = {r}".format(s=sources_order[0], r=inputDetails["ratioDenominatorLabel"]))
+    sources_order = [labelWithSpaces.strip() for labelWithSpaces in (str(inputDetails["order"])).split(",")]
+    if (sources_order[0] != str(inputDetails["ratioDenominatorLabel"])): sys.exit("ERROR: Code assumes that first element in sources_order is the basis of comparison. Currently, sources_order[0] = {s}, ratioDenominatorLabel = {r}".format(s=sources_order[0], r=str(inputDetails["ratioDenominatorLabel"])))
     suppress_histogram = {}
     for label in sources_order:
         print("Fetching histogram for label: {l}".format(l=label))
         inputHistogram = ROOT.TH1F()
         if ("filePath" in inputDetails["sources"][label]):
-            inputFile = ROOT.TFile.Open(inputDetails["sources"][label]["filePath"], "READ")
+            inputFile = ROOT.TFile.Open(getFormattedInputData(inputDetails["sources"][label]["filePath"]), "READ")
             if ((inputFile.IsZombie() == ROOT.kTRUE) or not(inputFile.IsOpen() == ROOT.kTRUE)):
-                sys.exit("ERROR in opening file: {f}".format(f=inputDetails["sources"][label]["filePath"]))
+                sys.exit("ERROR in opening file: {f}".format(f=getFormattedInputData(inputDetails["sources"][label]["filePath"])))
             inputFile.GetObject(str(inputDetails["sources"][label]["histogramName"]), inputHistogram)
-            if (not(inputHistogram)): sys.exit("Unable to find non-null histogram with name {n} in file {f}".format(n=inputDetails["sources"][label]["histogramName"], f=inputDetails["sources"][label]["filePath"]))
+            if (not(inputHistogram)): sys.exit("Unable to find non-null histogram with name {n} in file {f}".format(n=str(inputDetails["sources"][label]["histogramName"]), f=getFormattedInputData(inputDetails["sources"][label]["filePath"])))
             inputFile.Close()
-        elif ("combineSources" in inputDetails["sources"][label]):
-            filePathHistNamePairs = inputDetails["sources"][label]["combineSources"].split(";")
+        elif ("combineSources" in str(inputDetails["sources"][label])):
+            filePathHistNamePairs = getFormattedInputData(inputDetails["sources"][label]["combineSources"]).split(";")
             firstPairSplit = (filePathHistNamePairs[0]).split(":")
             firstPair_inputFile = ROOT.TFile.Open(firstPairSplit[0], "READ")
             if ((firstPair_inputFile.IsZombie() == ROOT.kTRUE) or not(firstPair_inputFile.IsOpen() == ROOT.kTRUE)):
@@ -217,15 +221,15 @@ def saveComparisons(target):
         inputHistogramsScaled[label].SetName("{t}_{l}".format(t=target, l=label))
         scaleFactor = 1.0
         try:
-            scaleFactor = 1.0/inputHistogramsScaled[label].GetBinContent(inputHistogramsScaled[label].GetXaxis().FindFixBin(float(inputDetails["normX"])))
+            scaleFactor = 1.0/inputHistogramsScaled[label].GetBinContent(inputHistogramsScaled[label].GetXaxis().FindFixBin(float(str(inputDetails["normX"]))))
         except ZeroDivisionError: # It could be that the normalization bin has 0 events... in that case pick the bin with maximum events.
-            if (label == inputDetails["ratioDenominatorLabel"]):
+            if (label == str(inputDetails["ratioDenominatorLabel"])):
                 sys.exit("You're out of luck: histogram chosen as the basis of comparison has 0 events in the target normalization bin.")
             else:
                 maximumBin = inputHistogramsScaled[label].GetMaximumBin()
                 try:
-                    scaleFactor = inputHistogramsScaled[inputDetails["ratioDenominatorLabel"]].GetBinContent(maximumBin)/inputHistogramsScaled[label].GetBinContent(maximumBin)
-                    # inputHistogramsScaled[inputDetails["ratioDenominatorLabel"]] is guaranteed to be set first, so this is OK
+                    scaleFactor = inputHistogramsScaled[str(inputDetails["ratioDenominatorLabel"])].GetBinContent(maximumBin)/inputHistogramsScaled[label].GetBinContent(maximumBin)
+                    # inputHistogramsScaled[str(inputDetails["ratioDenominatorLabel"])] is guaranteed to be set first, so this is OK
                 except ZeroDivisionError:
                     sys.exit("You're out of luck: histogram with label {l} appears empty".format(l=label))
         suppress_histogram[label] = False
@@ -237,7 +241,7 @@ def saveComparisons(target):
     # Find ratios and, if requested, save them in a file
     saveRatiosToFile = False
     try:
-        saveRatiosToFile = (inputDetails["saveRatiosToFile"] == "true")
+        saveRatiosToFile = (str(inputDetails["saveRatiosToFile"]) == "true")
     except KeyError:
         pass
 
@@ -245,22 +249,22 @@ def saveComparisons(target):
     ratioHistograms = {}
     fractionalUncertaintiesList = []
     for label in sources_order:
-        if ((label == inputDetails["ratioDenominatorLabel"]) or (suppress_histogram[label])): continue
+        if ((label == str(inputDetails["ratioDenominatorLabel"])) or (suppress_histogram[label])): continue
         ratioHistograms[label] = inputHistogramsScaled[label].Clone()
-        ratioHistograms[label].SetName("ratio_{t}_{l}_to_{ldenominator}".format(t=target, l=label, ldenominator=inputDetails["ratioDenominatorLabel"]))
+        ratioHistograms[label].SetName("ratio_{t}_{l}_to_{ldenominator}".format(t=target, l=label, ldenominator=str(inputDetails["ratioDenominatorLabel"])))
         for xCounter in range(1, 1+inputHistogramsScaled[label].GetXaxis().GetNbins()):
             minFractionalError = 0.
             fractionalErrorDown = 0.
             fractionalErrorUp = 0.
             if saveRatiosToFile:
-                minFractionalError = float(inputDetails["minFractionalError"])
+                minFractionalError = float(str(inputDetails["minFractionalError"]))
                 fractionalErrorDown = -1.0*minFractionalError
                 fractionalErrorUp = minFractionalError
             try:
                 numerator = inputHistogramsScaled[label].GetBinContent(xCounter)
                 numeratorError = inputHistogramsScaled[label].GetBinError(xCounter)
-                denominator = inputHistogramsScaled[inputDetails["ratioDenominatorLabel"]].GetBinContent(xCounter)
-                denominatorError = inputHistogramsScaled[inputDetails["ratioDenominatorLabel"]].GetBinError(xCounter)
+                denominator = inputHistogramsScaled[str(inputDetails["ratioDenominatorLabel"])].GetBinContent(xCounter)
+                denominatorError = inputHistogramsScaled[str(inputDetails["ratioDenominatorLabel"])].GetBinError(xCounter)
                 ratio = numerator/denominator
                 ratioError = ratio*math.sqrt(pow(numeratorError/numerator, 2) + pow(denominatorError/denominator, 2))
                 ratioHistograms[label].SetBinContent(xCounter, ratio)
@@ -282,9 +286,9 @@ def saveComparisons(target):
                 fractionalErrorDown = -0.8
                 fractionalErrorUp = 4.0
             if saveRatiosToFile:
-                fractionalUncertaintiesList.append(tuple(["float", (inputDetails["saveRatiosPatternDown"]).format(i=xCounter, l=label), fractionalErrorDown]))
-                fractionalUncertaintiesList.append(tuple(["float", (inputDetails["saveRatiosPatternUp"]).format(i=xCounter, l=label), fractionalErrorUp]))
-    if saveRatiosToFile: tmGeneralUtils.writeConfigurationParametersToFile(configurationParametersList=fractionalUncertaintiesList, outputFilePath=inputDetails["saveRatiosFile"])
+                fractionalUncertaintiesList.append(tuple(["float", (str(inputDetails["saveRatiosPatternDown"])).format(i=xCounter, l=label), fractionalErrorDown]))
+                fractionalUncertaintiesList.append(tuple(["float", (str(inputDetails["saveRatiosPatternUp"])).format(i=xCounter, l=label), fractionalErrorUp]))
+    if saveRatiosToFile: tmGeneralUtils.writeConfigurationParametersToFile(configurationParametersList=fractionalUncertaintiesList, outputFilePath=str(inputDetails["saveRatiosFile"]))
 
     # Find maximum value for scaled histogram and the label that has it
     runningMaxValue = None
@@ -297,14 +301,14 @@ def saveComparisons(target):
             labelWithMaxValue = label
 
     # First draw the histogram with the max bin
-    inputHistogramsScaled[labelWithMaxValue].SetLineColor(colorsDict[inputDetails["sources"][labelWithMaxValue]["color"]])
+    inputHistogramsScaled[labelWithMaxValue].SetLineColor(colorsDict[str(inputDetails["sources"][labelWithMaxValue]["color"])])
     inputHistogramsScaled[labelWithMaxValue].SetLineWidth(commonLineWidth)
     inputHistogramsScaled[labelWithMaxValue].GetXaxis().SetTitleSize(commonTitleSize)
     inputHistogramsScaled[labelWithMaxValue].GetXaxis().SetLabelSize(commonLabelSize)
     inputHistogramsScaled[labelWithMaxValue].GetXaxis().SetTickLength(0)
     inputHistogramsScaled[labelWithMaxValue].GetXaxis().SetLabelOffset(999)
     try:
-        inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetTitle(inputDetails["yLabel"])
+        inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetTitle(str(inputDetails["yLabel"]))
     except KeyError:
         print("yLabel not found in input JSON, setting default: \"A.U.\"")
         inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetTitle("A.U.")
@@ -316,11 +320,11 @@ def saveComparisons(target):
     # First "Draw" command is just to initialize the axes etc.; it will get overwritten.
     upperPad.Update()
     try:
-        inputHistogramsScaled[labelWithMaxValue].GetXaxis().SetRangeUser(float(inputDetails["plotXMin"]), float(inputDetails["plotXMax"]))
+        inputHistogramsScaled[labelWithMaxValue].GetXaxis().SetRangeUser(float(str(inputDetails["plotXMin"])), float(str(inputDetails["plotXMax"])))
     except KeyError:
         print("xmin and xmax not found in input JSON, not setting it explicly.")
     try:
-        inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetRangeUser(float(inputDetails["plotYMin"]), float(inputDetails["plotYMax"]))
+        inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetRangeUser(float(str(inputDetails["plotYMin"])), float(str(inputDetails["plotYMax"])))
     except KeyError:
         print("ymin and ymax not found in input JSON, not setting it explicly.")
     upperPad.Update()
@@ -329,17 +333,17 @@ def saveComparisons(target):
     for label in sources_order:
         # if (label == labelWithMaxValue): continue
         if (suppress_histogram[label]): continue
-        inputHistogramsScaled[label].SetLineColor(colorsDict[inputDetails["sources"][label]["color"]])
+        inputHistogramsScaled[label].SetLineColor(colorsDict[str(inputDetails["sources"][label]["color"])])
         inputHistogramsScaled[label].SetLineWidth(commonLineWidth)
         inputHistogramsScaled[label].Draw("AP0 SAME")
         upperPad.Update()
-        legendEntry = legend.AddEntry(inputHistogramsScaled[label], inputDetails["sources"][label]["label"])
-        legendEntry.SetLineColor(colorsDict[inputDetails["sources"][label]["color"]])
-        legendEntry.SetTextColor(colorsDict[inputDetails["sources"][label]["color"]])
-        legendEntry.SetMarkerColor(colorsDict[inputDetails["sources"][label]["color"]])
+        legendEntry = legend.AddEntry(inputHistogramsScaled[label], str(inputDetails["sources"][label]["label"]))
+        legendEntry.SetLineColor(colorsDict[str(inputDetails["sources"][label]["color"])])
+        legendEntry.SetTextColor(colorsDict[str(inputDetails["sources"][label]["color"])])
+        legendEntry.SetMarkerColor(colorsDict[str(inputDetails["sources"][label]["color"])])
     legend.Draw()
     upperPad.Update()
-    if (inputDetails["drawCMSLumi"] == "true"):
+    if (str(inputDetails["drawCMSLumi"]) == "true"):
         CMS_lumi.lumi_sqrtS = "13 TeV" # used with iPeriod = 0, e.g. for simulation-only plots (default is an empty string)
         CMS_lumi.lumi_13TeV = "137.2 fb^{-1}"
         CMS_lumi.relPosX    = 0.15
@@ -359,13 +363,13 @@ def saveComparisons(target):
     lowerPad.cd()
     plotPropertiesSet = False
     for label in sources_order:
-        if ((label == inputDetails["ratioDenominatorLabel"]) or (suppress_histogram[label])): continue
-        ratioHistograms[label].SetLineColor(colorsDict[inputDetails["sources"][label]["color"]])
+        if ((label == str(inputDetails["ratioDenominatorLabel"])) or (suppress_histogram[label])): continue
+        ratioHistograms[label].SetLineColor(colorsDict[str(inputDetails["sources"][label]["color"])])
         ratioHistograms[label].SetLineWidth(commonLineWidth)
         if (plotPropertiesSet):
             ratioHistograms[label].Draw("AP0 SAME")
             continue
-        ratioHistograms[label].GetXaxis().SetTitle(inputDetails["xLabel"])
+        ratioHistograms[label].GetXaxis().SetTitle(str(inputDetails["xLabel"]))
         ratioHistograms[label].GetXaxis().SetTitleSize(yTitleSize_upper/bottomToTopRatio)
         ratioHistograms[label].GetXaxis().SetLabelSize(yLabelSize_upper/bottomToTopRatio)
         ratioHistograms[label].GetXaxis().SetTickLength(yTickLength_upper)
@@ -377,16 +381,16 @@ def saveComparisons(target):
         ratioHistograms[label].GetYaxis().SetTickLength(yTickLength_upper)
         ratioHistograms[label].GetYaxis().SetNdivisions(2, 0, 0)
         ratioHistograms[label].Draw("P0")
-        ratioHistograms[label].GetXaxis().SetRangeUser(float(inputDetails["plotXMin"]), float(inputDetails["plotXMax"]))
+        ratioHistograms[label].GetXaxis().SetRangeUser(float(str(inputDetails["plotXMin"])), float(str(inputDetails["plotXMax"])))
         try:
-            ratioHistograms[label].GetYaxis().SetRangeUser(float(inputDetails["ratioYMin"]), float(inputDetails["ratioYMax"]))
+            ratioHistograms[label].GetYaxis().SetRangeUser(float(str(inputDetails["ratioYMin"])), float(str(inputDetails["ratioYMax"])))
         except KeyError:
             print("min and max values for ratio y-axis not found in input JSON, setting default: (0, 5)")
             ratioHistograms[label].GetYaxis().SetRangeUser(0., 5.)
         plotPropertiesSet = True
 
-    lineAt1 = ROOT.TLine(float(inputDetails["plotXMin"]), 1., float(inputDetails["plotXMax"]), 1.)
-    lineAt1.SetLineColor(colorsDict[inputDetails["sources"][inputDetails["ratioDenominatorLabel"]]["color"]])
+    lineAt1 = ROOT.TLine(float(str(inputDetails["plotXMin"])), 1., float(str(inputDetails["plotXMax"])), 1.)
+    lineAt1.SetLineColor(colorsDict[str(inputDetails["sources"][inputDetails["ratioDenominatorLabel"]]["color"])])
     lineAt1.SetLineWidth(commonLineWidth)
     lineAt1.Draw()
     lowerPad.cd()
@@ -396,7 +400,7 @@ def saveComparisons(target):
     frame.Draw()
 
     canvas.Update()
-    canvas.SaveAs("{oD}/{oP}".format(outputDirectory, oP=inputDetails["outputPath"]))
+    canvas.SaveAs("{oD}/{oP}".format(oD=outputDirectory, oP=str(inputDetails["outputPath"])))
 
 for target in inputPlots["targets"]:
     saveComparisons(target)
