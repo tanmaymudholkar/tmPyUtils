@@ -5,7 +5,7 @@ import os, sys, argparse, pdb, math, json, subprocess
 import tmGeneralUtils
 
 # Register command line options
-inputArgumentsParser = argparse.ArgumentParser(description='General tool to generate a CMS-formatted comparison of various histograms; list is read in from an input JSON file whose syntax is explained in the comment immediately following the argument parser setup.')
+inputArgumentsParser = argparse.ArgumentParser(description='General tool to generate a CMS-formatted comparison of various histograms; list is read in from an input JSON file.')
 inputArgumentsParser.add_argument('--inputFilePath', required=True, help='Path to input JSON.',type=str)
 inputArgumentsParser.add_argument('--userString', default="", help='The set of characters \"{uS}\" in the input JSON is replaced with the value of this argument.',type=str)
 inputArgumentsParser.add_argument('--printTemplate', action='store_true', help="Only print template for a skeleton JSON file and exit.")
@@ -102,11 +102,11 @@ if inputArguments.printTemplate:
 
 def saveComparisons(target):
     import ROOT
+    colorsDict = {"red": ROOT.kRed+2, "khaki": ROOT.kYellow+2, "green": ROOT.kGreen+2, "teal": ROOT.kCyan+2, "blue": ROOT.kBlue+2, "violet": ROOT.kMagenta+2, "black": ROOT.kBlack, "grey": ROOT.kWhite+2}
+
     import tdrstyle, CMS_lumi
     ROOT.gROOT.SetBatch(ROOT.kTRUE)
     ROOT.TH1.AddDirectory(ROOT.kFALSE)
-
-    colorsDict = {"red": ROOT.kRed+2, "khaki": ROOT.kYellow+2, "green": ROOT.kGreen+2, "teal": ROOT.kCyan+2, "blue": ROOT.kBlue+2, "violet": ROOT.kMagenta+2, "black": ROOT.kBlack, "grey": ROOT.kWhite+2}
 
     tdrstyle.setTDRStyle()
 
