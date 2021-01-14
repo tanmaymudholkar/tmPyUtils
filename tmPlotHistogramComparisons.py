@@ -139,7 +139,7 @@ def saveComparisons(target):
     canvas.SetTicky(0)
     canvas.Draw()
 
-    bottomFraction = 0.25
+    bottomFraction = 0.4
     bottomToTopRatio = bottomFraction/(1.0 - bottomFraction)
     upperPad = ROOT.TPad("upperPad_{t}".format(t=target), "upperPad_{t}".format(t=target), 0., bottomFraction, 0.97, 0.97)
     upperPad.SetMargin(0.12, 0.03, 0.025, 0.08) # left, right, bottom, top
