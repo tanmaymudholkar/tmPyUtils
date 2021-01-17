@@ -165,11 +165,14 @@ def normalizeHistogam(inputHist):
     except ZeroDivisionError:
         print("No entries in histogram with title " + inputHist.GetTitle() + " to normalize")
 
-def getSumOfBinContents(inputTH1):
+def getSumOfBinContents(inputTH1, includeUnderflow=False, includeOverflow=False):
     nBins = inputTH1.GetXaxis().GetNbins()
     sumBinContents = 0
     for binCounter in range(0, 2+nBins):
-        sumBinContents += inputTH1.GetBinContent(binCounter)
+        includeBin = True
+        if (binCounter == 0): includeBin = includeUnderflow
+        elif (binCounter == (1+nBins)): includeBin = includeOverflow
+        if includeBin: sumBinContents += inputTH1.GetBinContent(binCounter)
     return sumBinContents
 
 def extractTH2Contents(inputTH2, outputFileName, columnTitles=None, quantityName=None, includeOverflow=False, formatSpecifiers=None, onlyOutputNonzero=True, printRangeX=False, printRangeY=False):

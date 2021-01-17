@@ -2,7 +2,7 @@
 
 from __future__ import print_function, division
 import os, sys, argparse, pdb, math, json, subprocess
-import tmGeneralUtils
+import tmGeneralUtils, tmROOTUtils
 
 # Register command line options
 inputArgumentsParser = argparse.ArgumentParser(description='General tool to generate a CMS-formatted comparison of various histograms; list is read in from an input JSON file.')
@@ -30,6 +30,7 @@ if inputArguments.printTemplate:
                 "nColumns": "3" # number of columns in legend
                 # optional, not included in this example: edgeLeft, edgeBottom, edgeRight, edgeTop, which control the edges of the legend
             },
+            "normType": "integral", # currently only one argument, "integral", is supported; if this is set, the histograms are normalized to the same integral (rather than the same value in a normalization bin)
             "normX": "1250.0", # the x value at which to scale the bin contents of all histograms to 1
             "plotXMin": "1200.0", # x range min to plot
             "plotXMax": "3500.0", # x range max to plot
@@ -175,6 +176,12 @@ def saveComparisons(target):
 
     # Get "scaled" versions of the input histograms
     inputHistogramsScaled = {}
+    normalizeToIntegral = False
+    try:
+        if (inputDetails["normType"] == "integral"): normalizeToIntegral = True
+        else: sys.exit("ERROR: unrecognized \"normType\": {nT}, currently can only take the value \"integral\".".format(nT=inputDetails["normType"]))
+    except KeyError:
+        pass
     sources_order = [labelWithSpaces.strip() for labelWithSpaces in (str(inputDetails["order"])).split(",")]
     if (sources_order[0] != str(inputDetails["ratioDenominatorLabel"])): sys.exit("ERROR: Code assumes that first element in sources_order is the basis of comparison. Currently, sources_order[0] = {s}, ratioDenominatorLabel = {r}".format(s=sources_order[0], r=str(inputDetails["ratioDenominatorLabel"])))
     suppress_histogram = {}
@@ -214,10 +221,13 @@ def saveComparisons(target):
         inputHistogramsScaled[label].SetName("{t}_{l}".format(t=target, l=label))
         scaleFactor = 1.0
         try:
-            scaleFactor = 1.0/inputHistogramsScaled[label].GetBinContent(inputHistogramsScaled[label].GetXaxis().FindFixBin(float(str(inputDetails["normX"]))))
+            if normalizeToIntegral:
+                scaleFactor = 1.0/tmROOTUtils.getSumOfBinContents(inputTH1=inputHistogramsScaled[label])
+            else:
+                scaleFactor = 1.0/inputHistogramsScaled[label].GetBinContent(inputHistogramsScaled[label].GetXaxis().FindFixBin(float(str(inputDetails["normX"]))))
         except ZeroDivisionError: # It could be that the normalization bin has 0 events... in that case pick the bin with maximum events.
             if (label == str(inputDetails["ratioDenominatorLabel"])):
-                sys.exit("You're out of luck: histogram chosen as the basis of comparison has 0 events in the target normalization bin.")
+                sys.exit("You're out of luck: histogram chosen as the basis of comparison has 0 events in the target normalization bin, or 0 integral.")
             else:
                 maximumBin = inputHistogramsScaled[label].GetMaximumBin()
                 try:
