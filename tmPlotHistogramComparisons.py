@@ -36,6 +36,7 @@ if inputArguments.printTemplate:
             "plotYMin": "0.001", # y range min to plot
             "plotYMax": "2.0", # y range max to plot
             "ratioDenominatorLabel": "signal", # label whose histogram is to be considered as the denominator while taking the ratio
+            "ratioType": "pull", # can take exactly two arguments: "pull", in which case bottom plot displays (ratio-1)/ratioError, or "nominal", in which case bottom plot displays nominal ratio.
             "ratioYMin": "-0.5", # y range min of ratio plot
             "ratioYMax": "3.5", # y range max of ratio plot
             "sources": {
@@ -75,6 +76,7 @@ if inputArguments.printTemplate:
             "plotYMin": "0.001",
             "plotYMax": "2.0",
             "ratioDenominatorLabel": "signal",
+            "ratioType": "nominal",
             "ratioYMin": "-0.5",
             "ratioYMax": "3.5",
             "sources": {
@@ -238,11 +240,23 @@ def saveComparisons(target):
 
     # Find ratios
     ratioHistograms = {}
+    ratioPullGraphs = {}
+    ratioPullMultigraph = ROOT.TMultiGraph()
+    plotPulls = False
+    try:
+        ratioType = str(inputDetails["ratioType"])
+        if (ratioType == "pull"): plotPulls = True
+        elif (ratioType == "nominal"): plotPulls = False
+        else: sys.exit("ERROR: \"ratioType\" can be either \"pull\" or \"nominal\". Currently, its value is: {rT}".format(rT=ratioType))
+    except KeyError:
+        sys.exit("ERROR: \"ratioType\" not found; needs to be set explicitly.")
     fractionalUncertaintiesList = []
     for label in sources_order:
         if ((label == str(inputDetails["ratioDenominatorLabel"])) or (suppress_histogram[label])): continue
         ratioHistograms[label] = inputHistogramsScaled[label].Clone()
         ratioHistograms[label].SetName("ratio_{t}_{l}_to_{ldenominator}".format(t=target, l=label, ldenominator=str(inputDetails["ratioDenominatorLabel"])))
+        ratioPullGraphs[label] = ROOT.TGraphErrors()
+        ratioPullGraphs[label].SetName("ratioGraph_{t}_{l}_to_{ldenominator}".format(t=target, l=label, ldenominator=str(inputDetails["ratioDenominatorLabel"])))
         for xCounter in range(1, 1+inputHistogramsScaled[label].GetXaxis().GetNbins()):
             minFractionalError = 0.
             fractionalErrorDown = 0.
@@ -260,6 +274,9 @@ def saveComparisons(target):
                 ratioError = ratio*math.sqrt(pow(numeratorError/numerator, 2) + pow(denominatorError/denominator, 2))
                 ratioHistograms[label].SetBinContent(xCounter, ratio)
                 ratioHistograms[label].SetBinError(xCounter, ratioError)
+                ratioBinIndex = ratioPullGraphs[label].GetN()
+                ratioPullGraphs[label].SetPoint(ratioBinIndex, ratioHistograms[label].GetBinCenter(xCounter), (ratio - 1.0)/ratioError)
+                ratioPullGraphs[label].SetPointError(ratioBinIndex, 0.5*(ratioHistograms[label].GetXaxis().GetBinUpEdge(xCounter) - ratioHistograms[label].GetXaxis().GetBinLowEdge(xCounter)), 0.)
                 if saveRatiosToFile:
                     if (ratio < (1.0 - minFractionalError)):
                         fractionalErrorDown = ratio - 1.0 # lnN (1+delta) = ratio
@@ -276,6 +293,9 @@ def saveComparisons(target):
                 # default: factor-of-5 in both directions
                 fractionalErrorDown = -0.8
                 fractionalErrorUp = 4.0
+                ratioBinIndex = ratioPullGraphs[label].GetN()
+                ratioPullGraphs[label].SetPoint(ratioBinIndex, ratioHistograms[label].GetBinCenter(xCounter), 0.)
+                ratioPullGraphs[label].SetPointError(ratioBinIndex, 0.5*(ratioHistograms[label].GetXaxis().GetBinUpEdge(xCounter) - ratioHistograms[label].GetXaxis().GetBinLowEdge(xCounter)), 0.)
             if saveRatiosToFile:
                 fractionalUncertaintiesList.append(tuple(["float", (str(inputDetails["saveRatiosPatternDown"])).format(i=xCounter, l=label), fractionalErrorDown]))
                 fractionalUncertaintiesList.append(tuple(["float", (str(inputDetails["saveRatiosPatternUp"])).format(i=xCounter, l=label), fractionalErrorUp]))
@@ -339,7 +359,7 @@ def saveComparisons(target):
         CMS_lumi.lumi_13TeV = "137.2 fb^{-1}"
         CMS_lumi.relPosX    = 0.15
         CMS_lumi.CMS_lumi(canvas, 4, 0)
-    
+
     upperPad.cd()
     upperPad.Update()
     upperPad.RedrawAxis()
@@ -355,35 +375,64 @@ def saveComparisons(target):
     plotPropertiesSet = False
     for label in sources_order:
         if ((label == str(inputDetails["ratioDenominatorLabel"])) or (suppress_histogram[label])): continue
-        ratioHistograms[label].SetLineColor(colorsDict[str(inputDetails["sources"][label]["color"])])
-        ratioHistograms[label].SetLineWidth(commonLineWidth)
-        if (plotPropertiesSet):
-            ratioHistograms[label].Draw("AP0 SAME")
-            continue
-        ratioHistograms[label].GetXaxis().SetTitle(str(inputDetails["xLabel"]))
-        ratioHistograms[label].GetXaxis().SetTitleSize(yTitleSize_upper/bottomToTopRatio)
-        ratioHistograms[label].GetXaxis().SetLabelSize(yLabelSize_upper/bottomToTopRatio)
-        ratioHistograms[label].GetXaxis().SetTickLength(yTickLength_upper)
-        ratioHistograms[label].GetXaxis().SetTitleOffset(0.86)
-        ratioHistograms[label].GetYaxis().SetTitle("ratio")
-        ratioHistograms[label].GetYaxis().SetTitleOffset(1.4*bottomToTopRatio*commonTitleOffset)
-        ratioHistograms[label].GetYaxis().SetTitleSize(0.75*yTitleSize_upper/bottomToTopRatio)
-        ratioHistograms[label].GetYaxis().SetLabelSize(yLabelSize_upper/bottomToTopRatio)
-        ratioHistograms[label].GetYaxis().SetTickLength(yTickLength_upper)
-        ratioHistograms[label].GetYaxis().SetNdivisions(2, 0, 0)
-        ratioHistograms[label].Draw("P0")
-        ratioHistograms[label].GetXaxis().SetRangeUser(float(str(inputDetails["plotXMin"])), float(str(inputDetails["plotXMax"])))
-        try:
-            ratioHistograms[label].GetYaxis().SetRangeUser(float(str(inputDetails["ratioYMin"])), float(str(inputDetails["ratioYMax"])))
-        except KeyError:
-            print("min and max values for ratio y-axis not found in input JSON, setting default: (0, 5)")
-            ratioHistograms[label].GetYaxis().SetRangeUser(0., 5.)
-        plotPropertiesSet = True
+        if plotPulls:
+            ratioPullGraphs[label].SetLineColor(colorsDict[str(inputDetails["sources"][label]["color"])])
+            ratioPullGraphs[label].SetMarkerColor(colorsDict[str(inputDetails["sources"][label]["color"])])
+            ratioPullGraphs[label].SetLineWidth(commonLineWidth)
+            ratioPullMultigraph.Add(ratioPullGraphs[label])
+        else:
+            ratioHistograms[label].SetLineColor(colorsDict[str(inputDetails["sources"][label]["color"])])
+            ratioHistograms[label].SetLineWidth(commonLineWidth)
+            if (plotPropertiesSet):
+                ratioHistograms[label].Draw("AP0 SAME")
+                continue
+            ratioHistograms[label].GetXaxis().SetTitle(str(inputDetails["xLabel"]))
+            ratioHistograms[label].GetXaxis().SetTitleSize(yTitleSize_upper/bottomToTopRatio)
+            ratioHistograms[label].GetXaxis().SetLabelSize(yLabelSize_upper/bottomToTopRatio)
+            ratioHistograms[label].GetXaxis().SetTickLength(yTickLength_upper)
+            ratioHistograms[label].GetXaxis().SetTitleOffset(0.86)
+            ratioHistograms[label].GetYaxis().SetTitle("ratio")
+            ratioHistograms[label].GetYaxis().SetTitleOffset(1.4*bottomToTopRatio*commonTitleOffset)
+            ratioHistograms[label].GetYaxis().SetTitleSize(0.75*yTitleSize_upper/bottomToTopRatio)
+            ratioHistograms[label].GetYaxis().SetLabelSize(yLabelSize_upper/bottomToTopRatio)
+            ratioHistograms[label].GetYaxis().SetTickLength(yTickLength_upper)
+            ratioHistograms[label].GetYaxis().SetNdivisions(2, 0, 0)
+            ratioHistograms[label].Draw("P0")
+            ratioHistograms[label].GetXaxis().SetRangeUser(float(str(inputDetails["plotXMin"])), float(str(inputDetails["plotXMax"])))
+            plotPropertiesSet = True
+            try:
+                ratioHistograms[label].GetYaxis().SetRangeUser(float(str(inputDetails["ratioYMin"])), float(str(inputDetails["ratioYMax"])))
+            except KeyError:
+                print("min and max values for ratio y-axis not found in input JSON, setting default: (0, 5)")
+                ratioHistograms[label].GetYaxis().SetRangeUser(0., 5.)
 
-    lineAt1 = ROOT.TLine(float(str(inputDetails["plotXMin"])), 1., float(str(inputDetails["plotXMax"])), 1.)
-    lineAt1.SetLineColor(colorsDict[str(inputDetails["sources"][inputDetails["ratioDenominatorLabel"]]["color"])])
-    lineAt1.SetLineWidth(commonLineWidth)
-    lineAt1.Draw()
+    if plotPulls:
+        ratioPullMultigraph.Draw("APL")
+        ratioPullMultigraph.GetXaxis().SetTitle(str(inputDetails["xLabel"]))
+        ratioPullMultigraph.GetXaxis().SetTitleSize(yTitleSize_upper/bottomToTopRatio)
+        ratioPullMultigraph.GetXaxis().SetLabelSize(yLabelSize_upper/bottomToTopRatio)
+        ratioPullMultigraph.GetXaxis().SetTickLength(yTickLength_upper)
+        ratioPullMultigraph.GetXaxis().SetTitleOffset(0.86)
+        ratioPullMultigraph.GetYaxis().SetTitle("#frac{ratio-1.0}{#Delta ratio}")
+        ratioPullMultigraph.GetYaxis().SetTitleOffset(1.4*bottomToTopRatio*commonTitleOffset)
+        ratioPullMultigraph.GetYaxis().SetTitleSize(0.75*yTitleSize_upper/bottomToTopRatio)
+        ratioPullMultigraph.GetYaxis().SetLabelSize(yLabelSize_upper/bottomToTopRatio)
+        ratioPullMultigraph.GetYaxis().SetTickLength(yTickLength_upper)
+        ratioPullMultigraph.GetYaxis().SetNdivisions(2, 0, 0)
+        ratioPullMultigraph.GetXaxis().SetRangeUser(float(str(inputDetails["plotXMin"])), float(str(inputDetails["plotXMax"])))
+        try:
+            ratioPullMultigraph.GetYaxis().SetRangeUser(float(str(inputDetails["ratioYMin"])), float(str(inputDetails["ratioYMax"])))
+        except KeyError:
+            print("min and max values for ratio y-axis not found in input JSON, not setting explicitly.")
+        lowerPad.Update()
+
+    nominalExpectation = 1.
+    if plotPulls: nominalExpectation = 0.
+    nominalExpectationLine = ROOT.TLine(float(str(inputDetails["plotXMin"])), nominalExpectation, float(str(inputDetails["plotXMax"])), nominalExpectation)
+    nominalExpectationLine.SetLineColor(colorsDict[str(inputDetails["sources"][inputDetails["ratioDenominatorLabel"]]["color"])])
+    nominalExpectationLine.SetLineWidth(commonLineWidth)
+    nominalExpectationLine.Draw()
+
     lowerPad.cd()
     lowerPad.Update()
     lowerPad.RedrawAxis()
