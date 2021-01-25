@@ -38,6 +38,7 @@ if inputArguments.printTemplate:
             "plotYMax": "2.0", # y range max to plot
             "ratioDenominatorLabel": "signal", # label whose histogram is to be considered as the denominator while taking the ratio
             "ratioType": "pull", # can take exactly two arguments: "pull", in which case bottom plot displays (ratio-1)/ratioError, or "nominal", in which case bottom plot displays nominal ratio.
+            "saveRatiosToFile": "false", # if set to "true", then ratios are saved separately in a text file given by the argument "saveRatiosFile"
             "ratioYMin": "-0.5", # y range min of ratio plot
             "ratioYMax": "3.5", # y range max of ratio plot
             "sources": {
@@ -281,12 +282,22 @@ def saveComparisons(target):
                 denominator = inputHistogramsScaled[str(inputDetails["ratioDenominatorLabel"])].GetBinContent(xCounter)
                 denominatorError = inputHistogramsScaled[str(inputDetails["ratioDenominatorLabel"])].GetBinError(xCounter)
                 ratio = numerator/denominator
-                ratioError = ratio*math.sqrt(pow(numeratorError/numerator, 2) + pow(denominatorError/denominator, 2))
+                ratioFractionalError = math.sqrt(pow(numeratorError/numerator, 2) + pow(denominatorError/denominator, 2))
+                ratioError = ratio*ratioFractionalError
+                normBinFractionalError_normNJets = inputHistogramsScaled[str(inputDetails["ratioDenominatorLabel"])].GetBinError(1)/inputHistogramsScaled[str(inputDetails["ratioDenominatorLabel"])].GetBinContent(1)
+                normBinFractionalError_thisNJets = inputHistogramsScaled[label].GetBinError(1)/inputHistogramsScaled[label].GetBinContent(1)
+                normBinFractionalError = math.sqrt(pow(normBinFractionalError_normNJets, 2) + pow(normBinFractionalError_thisNJets, 2))
                 ratioHistograms[label].SetBinContent(xCounter, ratio)
-                ratioHistograms[label].SetBinError(xCounter, ratioError)
+                if normalizeToIntegral:
+                    ratioHistograms[label].SetBinError(xCounter, ratioError)
+                else:
+                    ratioHistograms[label].SetBinError(xCounter, ratio*math.sqrt(pow(ratioFractionalError, 2) + pow(normBinFractionalError, 2)))
                 ratioBinIndex = ratioPullGraphs[label].GetN()
                 ratioPullGraphs[label].SetPoint(ratioBinIndex, ratioHistograms[label].GetBinCenter(xCounter), (ratio - 1.0)/ratioError)
-                ratioPullGraphs[label].SetPointError(ratioBinIndex, 0.5*(ratioHistograms[label].GetXaxis().GetBinUpEdge(xCounter) - ratioHistograms[label].GetXaxis().GetBinLowEdge(xCounter)), 0.)
+                if normalizeToIntegral:
+                    ratioPullGraphs[label].SetPointError(ratioBinIndex, 0.5*(ratioHistograms[label].GetXaxis().GetBinUpEdge(xCounter) - ratioHistograms[label].GetXaxis().GetBinLowEdge(xCounter)), 0.)
+                else:
+                    ratioPullGraphs[label].SetPointError(ratioBinIndex, 0.5*(ratioHistograms[label].GetXaxis().GetBinUpEdge(xCounter) - ratioHistograms[label].GetXaxis().GetBinLowEdge(xCounter)), ratio*normBinFractionalError/ratioError)
                 if saveRatiosToFile:
                     if (ratio < (1.0 - minFractionalError)):
                         fractionalErrorDown = ratio - 1.0 # lnN (1+delta) = ratio
@@ -388,6 +399,9 @@ def saveComparisons(target):
         if plotPulls:
             ratioPullGraphs[label].SetLineColor(colorsDict[str(inputDetails["sources"][label]["color"])])
             ratioPullGraphs[label].SetMarkerColor(colorsDict[str(inputDetails["sources"][label]["color"])])
+            if not(normalizeToIntegral):
+                ratioPullGraphs[label].SetFillColorAlpha(colorsDict[str(inputDetails["sources"][label]["color"])], 0.9)
+                ratioPullGraphs[label].SetFillStyle(3001)
             ratioPullGraphs[label].SetLineWidth(commonLineWidth)
             ratioPullMultigraph.Add(ratioPullGraphs[label])
         else:
@@ -417,7 +431,11 @@ def saveComparisons(target):
                 ratioHistograms[label].GetYaxis().SetRangeUser(0., 5.)
 
     if plotPulls:
-        ratioPullMultigraph.Draw("APL")
+        if normalizeToIntegral:
+            ratioPullMultigraph.Draw("APL")
+        else:
+            ratioPullMultigraph.Draw("A2")
+            ratioPullMultigraph.Draw("PL")
         ratioPullMultigraph.GetXaxis().SetTitle(str(inputDetails["xLabel"]))
         ratioPullMultigraph.GetXaxis().SetTitleSize(yTitleSize_upper/bottomToTopRatio)
         ratioPullMultigraph.GetXaxis().SetLabelSize(yLabelSize_upper/bottomToTopRatio)
