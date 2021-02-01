@@ -39,8 +39,11 @@ if inputArguments.printTemplate:
             "ratioDenominatorLabel": "signal", # label whose histogram is to be considered as the denominator while taking the ratio
             "ratioType": "pull", # can take exactly two arguments: "pull", in which case bottom plot displays (ratio-1)/ratioError, or "nominal", in which case bottom plot displays nominal ratio.
             "saveRatiosToFile": "false", # if set to "true", then ratios are saved separately in a text file given by the argument "saveRatiosFile"
+            "saveRatioPlotsToFile": "false", # if set to "true", then ratio plots are saved separately in a file given by the argument "saveRatioPlotsFile"
             "ratioYMin": "-0.5", # y range min of ratio plot
             "ratioYMax": "3.5", # y range max of ratio plot
+            "pullYMin": "-0.5", # y range min of pull plot
+            "pullYMax": "3.5", # y range max of pull plot
             "sources": {
                 "signal": { # within each set of comparisons to produce, each histogram is given a label. Here we have three histograms in this comparison, with the labels "signal", "signal_loose", and "control".
                     "filePath": "/uscms/home/tmudholk/nobackup/analysisAreas/analysis/publicationPlots/signal_STComparisons_savedSTShapes.root", # path to file containing histogram
@@ -249,8 +252,15 @@ def saveComparisons(target):
     except KeyError:
         pass
 
-    # Find ratios
+    # Make ratio plots and, if requested, save them in a file
+    saveRatioPlotsToFile = False
+    try:
+        saveRatioPlotsToFile = (str(inputDetails["saveRatioPlotsToFile"]) == "true")
+    except KeyError:
+        pass
+
     ratioHistograms = {}
+    ratioGraphs = {}
     ratioPullGraphs = {}
     ratioPullMultigraph = ROOT.TMultiGraph()
     plotPulls = False
@@ -266,8 +276,10 @@ def saveComparisons(target):
         if ((label == str(inputDetails["ratioDenominatorLabel"])) or (suppress_histogram[label])): continue
         ratioHistograms[label] = inputHistogramsScaled[label].Clone()
         ratioHistograms[label].SetName("ratio_{t}_{l}_to_{ldenominator}".format(t=target, l=label, ldenominator=str(inputDetails["ratioDenominatorLabel"])))
+        ratioGraphs[label] = ROOT.TGraphErrors()
+        ratioGraphs[label].SetName("ratioGraph_{t}_{l}_to_{ldenominator}".format(t=target, l=label, ldenominator=str(inputDetails["ratioDenominatorLabel"])))
         ratioPullGraphs[label] = ROOT.TGraphErrors()
-        ratioPullGraphs[label].SetName("ratioGraph_{t}_{l}_to_{ldenominator}".format(t=target, l=label, ldenominator=str(inputDetails["ratioDenominatorLabel"])))
+        ratioPullGraphs[label].SetName("ratioPullGraph_{t}_{l}_to_{ldenominator}".format(t=target, l=label, ldenominator=str(inputDetails["ratioDenominatorLabel"])))
         for xCounter in range(1, 1+inputHistogramsScaled[label].GetXaxis().GetNbins()):
             minFractionalError = 0.
             fractionalErrorDown = 0.
@@ -287,17 +299,27 @@ def saveComparisons(target):
                 normBinFractionalError_normNJets = inputHistogramsScaled[str(inputDetails["ratioDenominatorLabel"])].GetBinError(1)/inputHistogramsScaled[str(inputDetails["ratioDenominatorLabel"])].GetBinContent(1)
                 normBinFractionalError_thisNJets = inputHistogramsScaled[label].GetBinError(1)/inputHistogramsScaled[label].GetBinContent(1)
                 normBinFractionalError = math.sqrt(pow(normBinFractionalError_normNJets, 2) + pow(normBinFractionalError_thisNJets, 2))
+
                 ratioHistograms[label].SetBinContent(xCounter, ratio)
                 if normalizeToIntegral:
                     ratioHistograms[label].SetBinError(xCounter, ratioError)
                 else:
                     ratioHistograms[label].SetBinError(xCounter, ratio*math.sqrt(pow(ratioFractionalError, 2) + pow(normBinFractionalError, 2)))
-                ratioBinIndex = ratioPullGraphs[label].GetN()
-                ratioPullGraphs[label].SetPoint(ratioBinIndex, ratioHistograms[label].GetBinCenter(xCounter), (ratio - 1.0)/ratioError)
+
+                ratioBinIndex = ratioGraphs[label].GetN()
+                ratioGraphs[label].SetPoint(ratioBinIndex, ratioHistograms[label].GetBinCenter(xCounter), ratio)
                 if normalizeToIntegral:
-                    ratioPullGraphs[label].SetPointError(ratioBinIndex, 0.5*(ratioHistograms[label].GetXaxis().GetBinUpEdge(xCounter) - ratioHistograms[label].GetXaxis().GetBinLowEdge(xCounter)), 0.)
+                    ratioGraphs[label].SetPointError(ratioBinIndex, 0.5*(ratioHistograms[label].GetXaxis().GetBinUpEdge(xCounter) - ratioHistograms[label].GetXaxis().GetBinLowEdge(xCounter)), ratioError)
                 else:
-                    ratioPullGraphs[label].SetPointError(ratioBinIndex, 0.5*(ratioHistograms[label].GetXaxis().GetBinUpEdge(xCounter) - ratioHistograms[label].GetXaxis().GetBinLowEdge(xCounter)), ratio*normBinFractionalError/ratioError)
+                    ratioGraphs[label].SetPointError(ratioBinIndex, 0.5*(ratioHistograms[label].GetXaxis().GetBinUpEdge(xCounter) - ratioHistograms[label].GetXaxis().GetBinLowEdge(xCounter)), ratioError) # norm bin error not included because the intention is to fit to a straight line...
+
+                ratioPullBinIndex = ratioPullGraphs[label].GetN()
+                ratioPullGraphs[label].SetPoint(ratioPullBinIndex, ratioHistograms[label].GetBinCenter(xCounter), (ratio - 1.0)/ratioError)
+                if normalizeToIntegral:
+                    ratioPullGraphs[label].SetPointError(ratioPullBinIndex, 0.5*(ratioHistograms[label].GetXaxis().GetBinUpEdge(xCounter) - ratioHistograms[label].GetXaxis().GetBinLowEdge(xCounter)), 0.)
+                else:
+                    ratioPullGraphs[label].SetPointError(ratioPullBinIndex, 0.5*(ratioHistograms[label].GetXaxis().GetBinUpEdge(xCounter) - ratioHistograms[label].GetXaxis().GetBinLowEdge(xCounter)), ratio*normBinFractionalError/ratioError)
+
                 if saveRatiosToFile:
                     if (ratio < (1.0 - minFractionalError)):
                         fractionalErrorDown = ratio - 1.0 # lnN (1+delta) = ratio
@@ -314,9 +336,9 @@ def saveComparisons(target):
                 # default: factor-of-5 in both directions
                 fractionalErrorDown = -0.8
                 fractionalErrorUp = 4.0
-                ratioBinIndex = ratioPullGraphs[label].GetN()
-                ratioPullGraphs[label].SetPoint(ratioBinIndex, ratioHistograms[label].GetBinCenter(xCounter), 0.)
-                ratioPullGraphs[label].SetPointError(ratioBinIndex, 0.5*(ratioHistograms[label].GetXaxis().GetBinUpEdge(xCounter) - ratioHistograms[label].GetXaxis().GetBinLowEdge(xCounter)), 0.)
+                ratioPullBinIndex = ratioPullGraphs[label].GetN()
+                ratioPullGraphs[label].SetPoint(ratioPullBinIndex, ratioHistograms[label].GetBinCenter(xCounter), 0.)
+                ratioPullGraphs[label].SetPointError(ratioPullBinIndex, 0.5*(ratioHistograms[label].GetXaxis().GetBinUpEdge(xCounter) - ratioHistograms[label].GetXaxis().GetBinLowEdge(xCounter)), 0.)
             if saveRatiosToFile:
                 fractionalUncertaintiesList.append(tuple(["float", (str(inputDetails["saveRatiosPatternDown"])).format(i=xCounter, l=label), fractionalErrorDown]))
                 fractionalUncertaintiesList.append(tuple(["float", (str(inputDetails["saveRatiosPatternUp"])).format(i=xCounter, l=label), fractionalErrorUp]))
@@ -449,7 +471,7 @@ def saveComparisons(target):
         ratioPullMultigraph.GetYaxis().SetNdivisions(2, 0, 0)
         ratioPullMultigraph.GetXaxis().SetRangeUser(float(str(inputDetails["plotXMin"])), float(str(inputDetails["plotXMax"])))
         try:
-            ratioPullMultigraph.GetYaxis().SetRangeUser(float(str(inputDetails["ratioYMin"])), float(str(inputDetails["ratioYMax"])))
+            ratioPullMultigraph.GetYaxis().SetRangeUser(float(str(inputDetails["pullYMin"])), float(str(inputDetails["pullYMax"])))
         except KeyError:
             print("min and max values for ratio y-axis not found in input JSON, not setting explicitly.")
         lowerPad.Update()
@@ -469,6 +491,66 @@ def saveComparisons(target):
 
     canvas.Update()
     canvas.SaveAs("{oD}/{oP}".format(oD=outputDirectory, oP=str(inputDetails["outputPath"])))
+
+    if saveRatioPlotsToFile:
+        canvas = ROOT.TCanvas("oC_ratioGraphs_{t}".format(t=target), "oC_ratioGraphs_{t}".format(t=target), 50, 50, WIDTH, HEIGHT)
+        ROOT.gStyle.SetOptStat(0)
+        ROOT.gStyle.SetOptFit(0)
+        ratioPlotsLegend = ROOT.TLegend(0.17, 0.17, 0.95, 0.45)
+        ratioPlotsLegend.SetNColumns(1)
+        ratioPlotsLegend.SetBorderSize(commonLineWidth)
+        ratioPlotsLegend.SetFillStyle(0)
+        ROOT.gStyle.SetLegendTextSize(0.02)
+        axesDrawn = False
+        for label in sources_order:
+            if ((label == str(inputDetails["ratioDenominatorLabel"])) or (suppress_histogram[label])): continue
+            ratioGraphs[label].SetLineColor(colorsDict[str(inputDetails["sources"][label]["color"])])
+            ratioGraphs[label].SetMarkerColor(colorsDict[str(inputDetails["sources"][label]["color"])])
+            if not(axesDrawn):
+                ratioGraphs[label].Draw("AP")
+                ratioGraphs[label].GetXaxis().SetTitle(str(inputDetails["xLabel"]))
+                ratioGraphs[label].GetYaxis().SetTitle("ratio")
+                ratioGraphs[label].GetXaxis().SetRangeUser(float(str(inputDetails["plotXMin"])), float(str(inputDetails["plotXMax"])))
+                try:
+                    ratioGraphs[label].GetYaxis().SetRangeUser(float(str(inputDetails["ratioYMin"])), float(str(inputDetails["ratioYMax"])))
+                except KeyError:
+                    print("min and max values for ratio y-axis not found in input JSON, not setting explicitly.")
+                axesDrawn = True
+            else: ratioGraphs[label].Draw("P")
+
+            fitResult_const = ratioGraphs[label].Fit("pol0", "EMS+")
+            fitFunction_const = ratioGraphs[label].GetFunction("pol0")
+            fitFunction_const.SetLineColor(colorsDict[str(inputDetails["sources"][label]["color"])])
+            fitFunction_const.SetLineStyle(ROOT.kSolid)
+            # fitFunction_const.SetLineWidth(3)
+            legendText_const = str(inputDetails["sources"][label]["label"]) + " best fit const: ratio = ({C:.2f} +/- {deltaC:.2f}), #chi^2 /ndf = {chi2perndf:.2f}".format(C=fitResult_const.Parameter(0), deltaC=fitResult_const.ParError(0), chi2perndf=fitResult_const.Chi2()/fitResult_const.Ndf())
+            print(legendText_const)
+            canvas.Update()
+
+            fitResult_slope = ratioGraphs[label].Fit("pol1", "EMS+")
+            fitFunction_slope = ratioGraphs[label].GetFunction("pol1")
+            fitFunction_slope.SetLineColor(colorsDict[str(inputDetails["sources"][label]["color"])])
+            fitFunction_slope.SetLineStyle(ROOT.kDashed)
+            # fitFunction_slope.SetLineWidth(3)
+            legendText_slope = str(inputDetails["sources"][label]["label"]) + " best fit line: ratio = ({C:.2f} +/- {deltaC:.2f}) + ({M:.2f} +/- {deltaM:.2f}) (ST/1000), #chi^2 /ndf = {chi2perndf:.2f}".format(C=fitResult_slope.Parameter(0), deltaC=fitResult_slope.ParError(0), M=1000*fitResult_slope.Parameter(1), deltaM=1000*fitResult_slope.ParError(1), chi2perndf=fitResult_slope.Chi2()/fitResult_slope.Ndf())
+            print(legendText_slope)
+            canvas.Update()
+
+            legendText = "#splitline{" + legendText_const + "}{" + legendText_slope + "}"
+            legendEntry = ratioPlotsLegend.AddEntry(ratioGraphs[label], legendText)
+            legendEntry.SetLineColor(colorsDict[str(inputDetails["sources"][label]["color"])])
+            legendEntry.SetTextColor(colorsDict[str(inputDetails["sources"][label]["color"])])
+            legendEntry.SetMarkerColor(colorsDict[str(inputDetails["sources"][label]["color"])])
+
+            canvas.Update()
+        lineAt1 = ROOT.TLine(float(str(inputDetails["plotXMin"])), 1.0, float(str(inputDetails["plotXMax"])), 1.0)
+        lineAt1.SetLineColor(colorsDict[str(inputDetails["sources"][inputDetails["ratioDenominatorLabel"]]["color"])])
+        lineAt1.SetLineWidth(4)
+        lineAt1.SetLineStyle(ROOT.kSolid)
+        lineAt1.Draw()
+        ratioPlotsLegend.Draw()
+        canvas.Update()
+        canvas.SaveAs("{oD}/{oP}".format(oD=outputDirectory, oP=str(inputDetails["saveRatioPlotsFile"])))
 
     del ROOT, tdrstyle, CMS_lumi
 
