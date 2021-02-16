@@ -454,10 +454,10 @@ def saveComparisons(target):
 
     if plotPulls:
         if normalizeToIntegral:
-            ratioPullMultigraph.Draw("APL")
+            ratioPullMultigraph.Draw("AP")
         else:
             ratioPullMultigraph.Draw("A2")
-            ratioPullMultigraph.Draw("PL")
+            ratioPullMultigraph.Draw("P")
         ratioPullMultigraph.GetXaxis().SetTitle(str(inputDetails["xLabel"]))
         ratioPullMultigraph.GetXaxis().SetTitleSize(yTitleSize_upper/bottomToTopRatio)
         ratioPullMultigraph.GetXaxis().SetLabelSize(yLabelSize_upper/bottomToTopRatio)
@@ -518,22 +518,22 @@ def saveComparisons(target):
                 axesDrawn = True
             else: ratioGraphs[label].Draw("P")
 
-            fitResult_const = ratioGraphs[label].Fit("pol0", "EMS+")
-            fitFunction_const = ratioGraphs[label].GetFunction("pol0")
-            fitFunction_const.SetLineColor(colorsDict[str(inputDetails["sources"][label]["color"])])
-            fitFunction_const.SetLineStyle(ROOT.kSolid)
-            # fitFunction_const.SetLineWidth(3)
+            fitFunction_const = ROOT.TF1("constFit_{l}".format(l=label), "pol0", inputHistogramsScaled[label].GetXaxis().GetBinLowEdge(2), inputHistogramsScaled[label].GetXaxis().GetBinUpEdge(inputHistogramsScaled[label].GetXaxis().GetNbins()))
+            fitResult_const = ratioGraphs[label].Fit("constFit_{l}".format(l=label), "QREMS+")
+            fitFunction_const_plot = ratioGraphs[label].GetFunction("constFit_{l}".format(l=label))
+            fitFunction_const_plot.SetLineColor(colorsDict[str(inputDetails["sources"][label]["color"])])
+            fitFunction_const_plot.SetLineStyle(ROOT.kSolid)
+            # fitFunction_const_plot.SetLineWidth(3)
             legendText_const = str(inputDetails["sources"][label]["label"]) + " best fit const: ratio = ({C:.2f} +/- {deltaC:.2f}), #chi^2 /ndf = {chi2perndf:.2f}".format(C=fitResult_const.Parameter(0), deltaC=fitResult_const.ParError(0), chi2perndf=fitResult_const.Chi2()/fitResult_const.Ndf())
-            print(legendText_const)
             canvas.Update()
 
-            fitResult_slope = ratioGraphs[label].Fit("pol1", "EMS+")
-            fitFunction_slope = ratioGraphs[label].GetFunction("pol1")
-            fitFunction_slope.SetLineColor(colorsDict[str(inputDetails["sources"][label]["color"])])
-            fitFunction_slope.SetLineStyle(ROOT.kDashed)
-            # fitFunction_slope.SetLineWidth(3)
+            fitFunction_slope = ROOT.TF1("lineFit_{l}".format(l=label), "pol1", inputHistogramsScaled[label].GetXaxis().GetBinLowEdge(2), inputHistogramsScaled[label].GetXaxis().GetBinUpEdge(inputHistogramsScaled[label].GetXaxis().GetNbins()))
+            fitResult_slope = ratioGraphs[label].Fit("lineFit_{l}".format(l=label), "QREMS+")
+            fitFunction_slope_plot = ratioGraphs[label].GetFunction("lineFit_{l}".format(l=label))
+            fitFunction_slope_plot.SetLineColor(colorsDict[str(inputDetails["sources"][label]["color"])])
+            fitFunction_slope_plot.SetLineStyle(ROOT.kDashed)
+            # fitFunction_slope_plot.SetLineWidth(3)
             legendText_slope = str(inputDetails["sources"][label]["label"]) + " best fit line: ratio = ({C:.2f} +/- {deltaC:.2f}) + ({M:.2f} +/- {deltaM:.2f}) (ST/1000), #chi^2 /ndf = {chi2perndf:.2f}".format(C=fitResult_slope.Parameter(0), deltaC=fitResult_slope.ParError(0), M=1000*fitResult_slope.Parameter(1), deltaM=1000*fitResult_slope.ParError(1), chi2perndf=fitResult_slope.Chi2()/fitResult_slope.Ndf())
-            print(legendText_slope)
             canvas.Update()
 
             legendText = "#splitline{" + legendText_const + "}{" + legendText_slope + "}"
