@@ -296,8 +296,9 @@ def saveComparisons(target):
                 ratio = numerator/denominator
                 ratioFractionalError = math.sqrt(pow(numeratorError/numerator, 2) + pow(denominatorError/denominator, 2))
                 ratioError = ratio*ratioFractionalError
-                normBinFractionalError_normNJets = inputHistogramsScaled[str(inputDetails["ratioDenominatorLabel"])].GetBinError(1)/inputHistogramsScaled[str(inputDetails["ratioDenominatorLabel"])].GetBinContent(1)
-                normBinFractionalError_thisNJets = inputHistogramsScaled[label].GetBinError(1)/inputHistogramsScaled[label].GetBinContent(1)
+                normBinIndex = inputHistogramsScaled[label].GetXaxis().FindFixBin(float(str(inputDetails["normX"])))
+                normBinFractionalError_normNJets = inputHistogramsScaled[str(inputDetails["ratioDenominatorLabel"])].GetBinError(normBinIndex)/inputHistogramsScaled[str(inputDetails["ratioDenominatorLabel"])].GetBinContent(normBinIndex)
+                normBinFractionalError_thisNJets = inputHistogramsScaled[label].GetBinError(normBinIndex)/inputHistogramsScaled[label].GetBinContent(normBinIndex)
                 normBinFractionalError = math.sqrt(pow(normBinFractionalError_normNJets, 2) + pow(normBinFractionalError_thisNJets, 2))
 
                 ratioHistograms[label].SetBinContent(xCounter, ratio)
