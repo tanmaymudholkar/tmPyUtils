@@ -18,6 +18,7 @@ if inputArguments.printTemplate:
     print("Template: ")
     print("""
 {
+    "outputDirectory": "~/nobackup/temp", # directory in which files given by "outputPath" are written
     "targets": {
         "histograms_2Jets": { # Each set of comparisons to produce is given a label (aka a "target" in the following code). Here we have two sets of comparisons, with the labels "histograms_2Jets" and "histograms_3Jets".
             "outputPath": "STHistograms_2Jets.pdf", # path to output file
@@ -44,6 +45,7 @@ if inputArguments.printTemplate:
             "ratioYMax": "3.5", # y range max of ratio plot
             "pullYMin": "-0.5", # y range min of pull plot
             "pullYMax": "3.5", # y range max of pull plot
+            "order": "signal, signal_loose, control", # order in which to plot the histograms
             "sources": {
                 "signal": { # within each set of comparisons to produce, each histogram is given a label. Here we have three histograms in this comparison, with the labels "signal", "signal_loose", and "control".
                     "filePath": "/uscms/home/tmudholk/nobackup/analysisAreas/analysis/publicationPlots/signal_STComparisons_savedSTShapes.root", # path to file containing histogram
@@ -84,6 +86,7 @@ if inputArguments.printTemplate:
             "ratioType": "nominal",
             "ratioYMin": "-0.5",
             "ratioYMax": "3.5",
+            "order": "signal, signal_loose, control",
             "sources": {
                 "signal": {
                     "filePath": "/uscms/home/tmudholk/nobackup/analysisAreas/analysis/publicationPlots/signal_STComparisons_savedSTShapes.root",
