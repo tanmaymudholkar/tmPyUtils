@@ -45,6 +45,7 @@ if inputArguments.printTemplate:
             "ratioYMax": "3.5", # y range max of ratio plot
             "pullYMin": "-0.5", # y range min of pull plot
             "pullYMax": "3.5", # y range max of pull plot
+            "customDrawOptions": "HIST", # if this argument is set, the value here is passed to the Draw method that is called for the histograms in the upper canvas
             "order": "signal, signal_loose, control", # order in which to plot the histograms
             "sources": {
                 "signal": { # within each set of comparisons to produce, each histogram is given a label. Here we have three histograms in this comparison, with the labels "signal", "signal_loose", and "control".
@@ -374,7 +375,14 @@ def saveComparisons(target):
     inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetLabelSize(commonLabelSize)
     inputHistogramsScaled[labelWithMaxValue].GetYaxis().SetTitleOffset(commonTitleOffset)
 
-    inputHistogramsScaled[labelWithMaxValue].Draw("P0")
+    drawOptions = None
+    try:
+        drawOptions = str(inputDetails["customDrawOptions"])
+    except KeyError:
+        print("customDrawOptions not found in input JSON, setting default \"P0\"")
+        drawOptions = "P0"
+
+    inputHistogramsScaled[labelWithMaxValue].Draw(drawOptions)
     # First "Draw" command is just to initialize the axes etc.; it will get overwritten.
     upperPad.Update()
     try:
@@ -393,7 +401,7 @@ def saveComparisons(target):
         if (suppress_histogram[label]): continue
         inputHistogramsScaled[label].SetLineColor(colorsDict[str(inputDetails["sources"][label]["color"])])
         inputHistogramsScaled[label].SetLineWidth(commonLineWidth)
-        inputHistogramsScaled[label].Draw("AP0 SAME")
+        inputHistogramsScaled[label].Draw("A {dO} SAME".format(dO=drawOptions))
         upperPad.Update()
         legendEntry = legend.AddEntry(inputHistogramsScaled[label], str(inputDetails["sources"][label]["label"]))
         legendEntry.SetLineColor(colorsDict[str(inputDetails["sources"][label]["color"])])
