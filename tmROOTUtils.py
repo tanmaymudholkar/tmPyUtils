@@ -415,3 +415,14 @@ def getTLineAngleInDegrees(pad, tline, printDebug = False):
         sys.exit("Unknown quadrant: {q}".format(q=quadrant))
     if (printDebug): print("Found angle: {a}".format(a=fullAngleInDegrees))
     return fullAngleInDegrees
+
+def getHistogramCorrectedBySlope(inputHistogram, slope, normX):
+    outputHistogram = inputHistogram.Clone()
+    normBinIndex = inputHistogram.GetXaxis().FindFixBin(normX)
+    if ((normBinIndex == 0) or (normBinIndex > inputHistogram.GetXaxis().GetNbins())): sys.exit("ERROR: normX = {n} corresponds to normBinIndex = {nBI} which is outside the histogram range!".format(n=normX, nBI=normBinIndex))
+    for binIndex in range(1, 1 + inputHistogram.GetXaxis().GetNbins()):
+        binCenter = inputHistogram.GetXaxis().GetBinCenter(binIndex)
+        adjustment = 1.0 + slope*(binCenter - normX)
+        outputHistogram.SetBinContent(binIndex, (inputHistogram.GetBinContent(binIndex))/adjustment)
+        outputHistogram.SetBinError(binIndex, (inputHistogram.GetBinError(binIndex))/adjustment)
+    return outputHistogram

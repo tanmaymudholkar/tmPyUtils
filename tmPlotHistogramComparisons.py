@@ -52,7 +52,12 @@ if inputArguments.printTemplate:
                     "filePath": "/uscms/home/tmudholk/nobackup/analysisAreas/analysis/publicationPlots/signal_STComparisons_savedSTShapes.root", # path to file containing histogram
                     "histogramName": "h_STDistribution_total_2Jets", # name of histogram within file
                     "color": "blue", # color to use for this histogram.
-                    "label": "signal" # what to use as a label in the legend
+                    "label": "signal" # what to use as a label in the legend,
+                    # The next argument requires a string in three parts split by the ":" character
+                    # The first part is a path to a file readable by tmGeneralUtils.getConfigurationFromFile
+                    # The second part is the name of the variable containing the value of the "slope" by which to correct the histogram
+                    # The final part (optional) sets the "scale" of the slope (i.e. the actual slope by which the correction is made is the slope from the input file divided by this value)
+                    "slopeCorrection": "/uscms_data/d3/tmudholk/analysisAreas/normBinOptimization_singlephoton/fitParameters_MC_GJet17_singlemedium.dat:bestFitSlope_3Jets:1000"
                 },
                 "signal_loose": { # same syntax as above
                     "filePath": "/uscms/home/tmudholk/nobackup/analysisAreas/analysis/publicationPlots/signal_loose_STComparisons_savedSTShapes.root",
@@ -248,6 +253,17 @@ def saveComparisons(target):
             suppress_histogram[label] = True
             print("WARNING: Unexpected scale factor: {s} for label: {l}; not drawing histogram.".format(s=scaleFactor, l=label))
         inputHistogramsScaled[label].Scale(scaleFactor) # Scale such that the value in the normalization bin is 1 for all sources
+        if ("slopeCorrection" in inputDetails["sources"][label]):
+            slopeFile = ((getFormattedInputData(inputDetails["sources"][label]["slopeCorrection"])).split(":"))[0]
+            slopeName = ((getFormattedInputData(inputDetails["sources"][label]["slopeCorrection"])).split(":"))[1]
+            slopeScale = None
+            try:
+                slopeScale = float(((getFormattedInputData(inputDetails["sources"][label]["slopeCorrection"])).split(":"))[2])
+            except IndexError:
+                slopeScale = 1.0
+            slopeParameters = tmGeneralUtils.getConfigurationFromFile(inputFilePath=slopeFile)
+            slope = slopeParameters[slopeName]/slopeScale
+            inputHistogramsScaled[label] = tmROOTUtils.getHistogramCorrectedBySlope(inputHistogram=inputHistogramsScaled[label], slope=slope, normX=float(str(inputDetails["normX"])))
 
     # Find ratios and, if requested, save them in a file
     saveRatiosToFile = False
