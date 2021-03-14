@@ -2,6 +2,8 @@ from __future__ import print_function, division
 
 import os, sys, math
 
+import scipy.stats
+
 DEFAULT_ZERO_TOLERANCE_COEFFICIENT=0.001
 
 def getMonotonicFunctionApproximateZero(inputFunction=None, xRange=None, zeroTolerance=None, autoZeroTolerance=False, printDebug=False):
@@ -94,6 +96,24 @@ def getGlobalMinimum(inputFunction=None, xRange=None, zeroTolerance=None, autoZe
             globalMinimumX = xvalue
     # Step 2: assume that the function will be convex over 5% of the input range at least (if not, the following will throw an exception)
     return getStrictlyConvexFunctionApproximateMinimum(inputFunction=inputFunction, xRange=[globalMinimumX - 0.025*(xmax - xmin), globalMinimumX + 0.025*(xmax - xmin)], zeroTolerance=zeroTolerance, autoZeroTolerance=autoZeroTolerance, printDebug=printDebug)
+
+# From Patrick
+def get_fTest_prob(chi2_1, chi2_2, ndf_1, ndf_2, printVerbose=False):
+    d1 = (ndf_1-ndf_2)
+    d2 = ndf_2
+    N = (chi2_1-chi2_2)/d1
+    D = chi2_2/d2
+    fStat = N/D
+    fProb = scipy.stats.f.cdf(fStat, d1, d2)
+    expectedFStat = scipy.stats.distributions.f.isf(0.05, d1, d2)
+    if printVerbose:
+        print("chi2_1 = {chi2_1}, chi2_2 = {chi2_2}".format(chi2_1=chi2_1, chi2_2=chi2_2))
+        print("ndf_1 = {ndf_1}, ndf_2 = {ndf_2}".format(ndf_1=ndf_1, ndf_2=ndf_2))
+        print("d1, d2 = %d, %d"%(d1, d2))
+        print("N, D = %f, %f"%(N, D))
+        print("    f(%i,%i) = %f (expected at 95%%: %f)"%(d1,d2,fStat,expectedFStat))
+        print("f.cdf(%i,%i) = %3.0f%%"%(d1,d2,100*fProb))
+    return fProb
 
 def tmStatsUtilsTest():
     print("Beginning tests:")
