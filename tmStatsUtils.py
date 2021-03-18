@@ -115,6 +115,10 @@ def get_fTest_prob(chi2_1, chi2_2, ndf_1, ndf_2, printVerbose=False):
         print("f.cdf(%i,%i) = %3.0f%%"%(d1,d2,100*fProb))
     return fProb
 
+def get_pVal_of_alternative_with_wilks(nll_null, nll_alternative, n_extra_parameters_in_alternative):
+    t = 2*(nll_null-nll_alternative)
+    return (scipy.stats.chi2.cdf(t, n_extra_parameters_in_alternative))
+
 def tmStatsUtilsTest():
     print("Beginning tests:")
     nColumns = os.getenv("COLUMNS")
