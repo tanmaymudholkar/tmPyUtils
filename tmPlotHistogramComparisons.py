@@ -427,7 +427,10 @@ def saveComparisons(target):
     upperPad.Update()
     if (str(inputDetails["drawCMSLumi"]) == "true"):
         CMS_lumi.lumi_sqrtS = "13 TeV" # used with iPeriod = 0, e.g. for simulation-only plots (default is an empty string)
-        CMS_lumi.lumi_13TeV = "137.2 fb^{-1}"
+        try:
+            CMS_lumi.lumi_13TeV = str(inputDetails["CMSLumi"])
+        except KeyError:
+            CMS_lumi.lumi_13TeV = "137.2 fb^{-1}"
         CMS_lumi.relPosX    = 0.15
         CMS_lumi.CMS_lumi(canvas, 4, 0)
 
