@@ -521,7 +521,7 @@ def saveComparisons(target):
     frame.Draw()
 
     canvas.Update()
-    canvas.SaveAs("{oD}/{oP}".format(oD=outputDirectory, oP=str(inputDetails["outputPath"])))
+    canvas.SaveAs("{oD}/{oP}".format(oD=outputDirectory, oP=getFormattedInputData(inputDetails["outputPath"])))
 
     if saveRatioPlotsToFile:
         canvas = ROOT.TCanvas("oC_ratioGraphs_{t}".format(t=target), "oC_ratioGraphs_{t}".format(t=target), 50, 50, WIDTH, HEIGHT)
