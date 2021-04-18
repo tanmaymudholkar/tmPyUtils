@@ -181,8 +181,9 @@ class tmCombineDataCardInterface:
         outputFile.write("------------\n")
         for line in self.generateSystematicsSection():
             outputFile.write(line.rstrip() + "\n")
-        for line in self.generateRateParamsSection():
-            outputFile.write(line.rstrip() + "\n")
+        if (bool(self.rateParamLabels)):
+            for line in self.generateRateParamsSection():
+                outputFile.write(line.rstrip() + "\n")
         outputFile.close()
 
 def tmCombineDataCardInterfaceTest():
