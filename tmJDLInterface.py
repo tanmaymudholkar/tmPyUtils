@@ -21,6 +21,7 @@ class tmJDLInterface:
         else:
             sys.exit("ERROR: Unrecognized hostname: {h}, seems to be neither lxplus nor fnal.".format(h=hostname))
         self.flavor_ = ""
+        self.explicitMemoryRequestInMB_ = -1.0
 
     def addScriptArgument(self, scriptArgument):
         if not(isinstance(scriptArgument, basestring)):
@@ -52,6 +53,11 @@ class tmJDLInterface:
         if not(self.habitat_ == "lxplus"):
             sys.exit("tmJDLInterface: method setFlavor only usable from lxplus.")
         self.flavor_ = flavor
+
+    def makeExplicitMemoryRequest(self, requestedMemoryInMB):
+        if not(isinstance(requestedMemoryInMB, int)):
+            sys.exit("tmJDLInterface: method makeExplicitMemoryRequest only accepts ints (memory in MB) as an argument.")
+        self.explicitMemoryRequestInMB_ = requestedMemoryInMB
 
     def writeToFile(self):
         outputJDLFileName = ("{oD}/{name}.jdl".format(oD=self.outputDirectoryRelativePath_, name=self.processName_))
@@ -100,6 +106,8 @@ class tmJDLInterface:
                     sys.exit("Flavor set to {f}, which is currently unsupported.".format(f=self.flavor_))
             else:
                 sys.exit("Flavor needs to be set for lxplus jobs.")
+        if (self.explicitMemoryRequestInMB_ > 0.):
+            outputJDL.write("request_memory = {m}\n".format(m=self.explicitMemoryRequestInMB_))
         outputJDL.write("queue 1\n")
         outputJDL.close()
 
