@@ -28,13 +28,23 @@ def GetLocal_adler32(local_file_path: str) -> str:
     if not(adler32_output_split[1] == local_file_path): sys.exit("ERROR: adler32 output not in expected format: {o}".format(o=adler32_output))
     return adler32_output_split[0]
 
-def GetListOfFilesInDirectory(xrd_prefix: str, directory_path_without_xrd_prefix: str) -> List[Tuple[str, str]]:
+def GetListOfFilesInDirectory(xrd_prefix: str, directory_path_without_xrd_prefix: str, print_verbose: bool) -> List[Tuple[str, str]]:
+    if print_verbose: print("Getting list of files and checksums from remote server...")
     xrdfs_ls_output = subprocess.check_output("xrdfs {p} ls -l -R {d}".format(p=xrd_prefix, d=directory_path_without_xrd_prefix), shell=True, text=True, executable="/bin/bash")
     list_of_files = []
+    xrdfs_ls_output_nlines = xrdfs_ls_output.count(os.linesep)
+    progressBar = tmProgressBar.tmProgressBar(counterMaxValue=xrdfs_ls_output_nlines)
+    line_index = 1
+    line_index_refresh_freq = max(1, xrdfs_ls_output_nlines//100)
+    progressBar.initializeTimer()
     for line in xrdfs_ls_output.splitlines():
-        if (len(line) == 0): continue
+        if (len(line) == 0):
+            line_index += 1
+            continue
         is_directory, full_path = Parse_xrdfs_ls_OutputLine(line)
-        if is_directory: continue
+        if is_directory:
+            line_index += 1
+            continue
         adler32_checksum_value = Query_xrdfs_adler32(xrd_prefix, full_path)
         if not(full_path[:len(directory_path_without_xrd_prefix)] == directory_path_without_xrd_prefix):
             sys.exit("ERROR: xrdfs ls output path {p} does not start with expected directory: {d}".format(p=full_path, d=directory_path_without_xrd_prefix))
@@ -42,11 +52,16 @@ def GetListOfFilesInDirectory(xrd_prefix: str, directory_path_without_xrd_prefix
         while (partial_path[0] == "/"):
             partial_path = partial_path[1:] # remove any leading slashes
         list_of_files.append((partial_path, adler32_checksum_value))
+        if ((line_index == 1) or
+            (line_index % line_index_refresh_freq == 0) or
+            (line_index == xrdfs_ls_output_nlines)): progressBar.updateBar(fractionCompleted=line_index/xrdfs_ls_output_nlines, counterCurrentValue=line_index)
+        line_index += 1
+    progressBar.terminate()
     return list_of_files
 
 def CloneDirectoryLocally(xrd_prefix_remote: str, remote_path_without_xrd_prefix: str, path_local: str, print_verbose: bool) -> None:
     if not(os.path.isdir(path_local)): subprocess.check_call("mkdir -p {p}".format(p=path_local), shell=True, executable="/bin/bash")
-    file_details = GetListOfFilesInDirectory(xrd_prefix_remote, remote_path_without_xrd_prefix)
+    file_details = GetListOfFilesInDirectory(xrd_prefix_remote, remote_path_without_xrd_prefix, print_verbose)
     progressBar = tmProgressBar.tmProgressBar(counterMaxValue=len(file_details))
     file_index = 1
     file_index_refresh_freq = max(1, len(file_details)//100)
@@ -60,20 +75,24 @@ def CloneDirectoryLocally(xrd_prefix_remote: str, remote_path_without_xrd_prefix
                 needs_update = False
         if print_verbose:
             if needs_update:
-                print("File {o}/{r} does not exist or has and has the wrong checksum. Copying...".format(o=path_local, r=relative_path))
+                print("File {o}/{r} does not exist or has the wrong checksum. Copying...".format(o=path_local, r=relative_path))
             else:
                 print("File {o}/{r} already exists and has the right checksum. Skipping!".format(o=path_local, r=relative_path))
-        if not(needs_update): continue
+        if not(needs_update):
+            file_index += 1
+            continue
         xrd_copy_command = "xrdcp --silent --nopbar --force --path --streams 15 {pref}//{parent}/{relpath} {outputdir}/{relpath}".format(pref=xrd_prefix_remote, parent=remote_path_without_xrd_prefix, relpath=relative_path, outputdir=path_local)
         subprocess.check_call(xrd_copy_command, shell=True, executable="/bin/bash")
         local_checksum_value = GetLocal_adler32("{o}/{r}".format(o=path_local, r=relative_path))
         if (not(checksum_value == local_checksum_value)): sys.exit("ERROR: Checksums do not match after copying file with relative path: {p}".format(p=relative_path))
-        if ((file_index % file_index_refresh_freq == 0) or (file_index == (len(file_details)-1))): progressBar.updateBar(file_index/len(file_details))
+        if ((file_index == 1) or
+            (file_index % file_index_refresh_freq == 0) or
+            (file_index == len(file_details))): progressBar.updateBar(fractionCompleted=file_index/len(file_details), counterCurrentValue=file_index)
         file_index += 1
     progressBar.terminate()
 
 def test():
-    list_of_files_test = GetListOfFilesInDirectory(xrd_prefix="root://cmseos.fnal.gov", directory_path_without_xrd_prefix="/store/user/tmudholk/test")
+    list_of_files_test = GetListOfFilesInDirectory(xrd_prefix="root://cmseos.fnal.gov", directory_path_without_xrd_prefix="/store/user/tmudholk/test", print_verbose=True)
     print("Files found:")
     for file_info in list_of_files_test:
         print("Found: {i}".format(i=file_info))
