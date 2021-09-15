@@ -1,7 +1,5 @@
 from __future__ import print_function, division
 
-import ROOT
-
 import sys, math, time
 
 WEIGHT_OVERALL = 0.5
