@@ -1,6 +1,6 @@
 import sys
 if (sys.version_info.major < 3): sys.exit("Must be using py3 onwards. Current version info: {v}".format(v=sys.version_info))
-if (sys.version_info.minor < 7): sys.exit("Must be using python 3.7 onwards. Current version info: {v}".format(v=sys.version_info))
+if (sys.version_info.minor < 6): sys.exit("Must be using python 3.6 onwards. Current version info: {v}".format(v=sys.version_info))
 
 import os, subprocess
 from typing import List, Tuple
@@ -15,14 +15,14 @@ def Parse_xrdfs_ls_OutputLine(xrdfs_ls_output_line: str) -> Tuple[bool, str]:
     return (is_directory, full_path)
 
 def Query_xrdfs_adler32(xrd_prefix: str, file_full_path: str) -> str:
-    query_output = subprocess.check_output("xrdfs {p} query checksum {f}".format(p=xrd_prefix, f=file_full_path), shell=True, text=True, executable="/bin/bash")
+    query_output = subprocess.check_output("xrdfs {p} query checksum {f}".format(p=xrd_prefix, f=file_full_path), shell=True, universal_newlines=True, executable="/bin/bash")
     query_output_split = (query_output.strip()).split()
     if not(len(query_output_split) == 2): sys.exit("ERROR: Unable to parse xrdfs checksum output: {o}".format(o=query_output))
     if not(query_output_split[0] == "adler32"): sys.exit("ERROR: xrdfs checksum returns it in an unexpected format: {f}".format(f=query_output_split[0]))
     return query_output_split[1]
 
 def GetLocal_adler32(local_file_path: str) -> str:
-    adler32_output = subprocess.check_output("xrdadler32 {f}".format(f=local_file_path), shell=True, text=True, executable="/bin/bash")
+    adler32_output = subprocess.check_output("xrdadler32 {f}".format(f=local_file_path), shell=True, universal_newlines=True, executable="/bin/bash")
     adler32_output_split = (adler32_output.strip()).split()
     if not(len(adler32_output_split) == 2): sys.exit("ERROR: adler32 output not in expected format: {o}".format(o=adler32_output))
     if not(adler32_output_split[1] == local_file_path): sys.exit("ERROR: adler32 output not in expected format: {o}".format(o=adler32_output))
@@ -30,7 +30,7 @@ def GetLocal_adler32(local_file_path: str) -> str:
 
 def GetListOfFilesInDirectory(xrd_prefix: str, directory_path_without_xrd_prefix: str, print_verbose: bool) -> List[Tuple[str, str]]:
     if print_verbose: print("Getting list of files and checksums from remote server...")
-    xrdfs_ls_output = subprocess.check_output("xrdfs {p} ls -l -R {d}".format(p=xrd_prefix, d=directory_path_without_xrd_prefix), shell=True, text=True, executable="/bin/bash")
+    xrdfs_ls_output = subprocess.check_output("xrdfs {p} ls -l -R {d}".format(p=xrd_prefix, d=directory_path_without_xrd_prefix), shell=True, universal_newlines=True, executable="/bin/bash")
     list_of_files = []
     xrdfs_ls_output_nlines = xrdfs_ls_output.count(os.linesep)
     progressBar = tmProgressBar.tmProgressBar(counterMaxValue=xrdfs_ls_output_nlines)
