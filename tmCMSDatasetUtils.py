@@ -33,12 +33,12 @@ def print_list_of_datasets_with_nevts(query_string):
         n_events = get_number_of_events_in_dataset(dataset)
         print("{d}: {n}".format(d=dataset, n=n_events))
         n_events_list.append((dataset, n_events))
-    max_length_dname = max([len(dataset) for dataset, n_events in n_events_list])
-    max_length_nevents = max([len(str(n_events)) for dataset, n_events in n_events_list])
+    print_length_dname = 2 + max([len(dataset) for dataset, n_events in n_events_list])
+    print_length_nevents = max([len(str(n_events)) for dataset, n_events in n_events_list])
     print("="*200)
     print("Number of events (sorted):")
     for dataset_name, n_events in sorted(n_events_list, key=(lambda d_n_pair: d_n_pair[1]), reverse=True):
-        print(("{d:>" + str(max_length_dname) + "}: {n:<" + str(max_length_nevents) + "}").format(d=dataset_name, n=n_events))
+        print(("{d:<" + str(print_length_dname) + "}: {n:>" + str(print_length_nevents) + "}").format(d=dataset_name, n=n_events))
 
 def get_mcm_prepid_for_dataset(dataset_name):
     dasgoclient_output_raw = str(subprocess.check_output("dasgoclient -query \"mcm dataset={d}\"".format(d=dataset_name), shell=True, universal_newlines=True, executable="/bin/bash"))
