@@ -53,7 +53,7 @@ class tmMultiProcessLauncher:
         if printDebug: print("Generated tail command: {tC}".format(tC=tailCommand))
         return tailCommand
 
-    def monitorToCompletion(self, printDebug=False):
+    def monitorToCompletion(self, killAllOnOneFailure=True, printDebug=False):
         print("Starting to monitor {n} processes:".format(n=len(self.processes_list)))
         oneOrMoreProcessesActive = True
         self.monitoring_process_handle = subprocess.Popen(self.generateTailCommand(printDebug=printDebug), shell=True, executable="/bin/bash")
@@ -72,9 +72,11 @@ class tmMultiProcessLauncher:
                     returnStatuses[logFileName] = processHandle.returncode
                     if (self.enableStrictErrorDetection):
                         if (returnStatuses[logFileName] != 0):
-                            self.killAll()
+                            if killAllOnOneFailure:
+                                self.killAll()
                             time.sleep(self.monitorUpdateTimeSeconds) # seems to be required between killAll and next line, maybe to clear buffer or something?
-                            sys.exit("ERROR in process with log: {lOF}/{lFN}. Return code: {r}".format(lOF=self.logOutputFolder, lFN=logFileName, r=returnStatuses[logFileName]))
+                            if killAllOnOneFailure:
+                                sys.exit("ERROR in process with log: {lOF}/{lFN}. Return code: {r}".format(lOF=self.logOutputFolder, lFN=logFileName, r=returnStatuses[logFileName]))
             if (len(processesToRemove) > 0):
                 for process in processesToRemove:
                     (self.processes_list).remove(process)
