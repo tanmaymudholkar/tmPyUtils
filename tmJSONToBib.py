@@ -10,6 +10,18 @@ inputArgumentsParser.add_argument("--bib_header_source", default="/dev/null", he
 inputArgumentsParser.add_argument("--bib_output", required=True, help="Path to output bib file.", type=str)
 inputArguments = inputArgumentsParser.parse_args()
 
+# For example, save the following (omitting the double quotes) in a file named example.json:
+"""
+{
+    "references": [
+        "doi:10.1016/j.physletb.2015.03.017",
+        "doi:10.1140/epjc/s10052-011-1554-0",
+        "arxiv:hep-ex/9902006"
+    ]
+}
+"""
+# and then run: ./tmJSONToBib.py --json_input example.json --bib_output example.bib
+
 # Step 0: some basic setup
 class AllowedKeys(enum.Enum): # each reference is identified either by its doi or by its arxiv id
     arxiv = 1
