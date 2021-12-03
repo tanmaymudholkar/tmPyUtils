@@ -23,7 +23,6 @@ def get_inspire_restapi_format_query(inspire_key: AllowedKeys, reference_id: str
     return ("https://inspirehep.net/api/{k}/{ident}?format=bibtex".format(k=allowed_keys_str[inspire_key], ident=reference_id))
 
 def get_bibtex_from_inspire(inspire_key: AllowedKeys, reference_id: str) -> str:
-    bibtex_output = "none\n"
     inspire_restapi_format_query = get_inspire_restapi_format_query(inspire_key, reference_id)
     response = requests.get(inspire_restapi_format_query)
     if not(response.status_code == 200): # HTTP OK, got back everything we asked for
