@@ -30,6 +30,21 @@ def get_bibtex_from_inspire(inspire_key: AllowedKeys, reference_id: str) -> str:
         sys.exit("Query failed. Are you sure this record exists? Query: {q}".format(q=inspire_restapi_format_query))
     return response.text
 
+def post_process(response_text: str) -> str:
+    output_text = ""
+    for response_line_uncorrected in response_text.splitlines():
+        if not(response_line_uncorrected == ""):
+            response_line = response_line_uncorrected
+            # if "pages" field has a page range, use only the first page (CMS guideline)
+            if (re.search(r'[pP][aA][gG][eE][sS] *= ', response_line)):
+                response_line = re.sub(r'([0-9]*)-{1,2}[0-9]*', r'\1', response_line)
+            # surround special characters in the "author" field with curly braces
+            if (re.search(r'[aA][uU][tT][hH][oO][rR] *= ', response_line)):
+                special_character_signatures = (r'`' + r"'" + r'\^"H~oclrv=')
+                response_line = re.sub((r'\\([' + special_character_signatures + '])([a-zA-Z])'), (r'{\\\1\2}'), response_line)
+            output_text += (response_line + "\n")
+    return output_text
+
 # Step 1: Load json input
 json_input_data = None
 with open(inputArguments.json_input, 'r') as json_input_handle:
@@ -61,7 +76,7 @@ for reference in references_from_json_input:
         sys.exit("ERROR in reference string: {s}. Must specify either \"doi\" or \"arxiv\" as identifier.".format(s=reference))
     reference_id = ''.join(reference_string_split[1:])
     print("Getting inspire_key: {i}, reference_id: {ident}".format(i=inspire_key, ident=reference_id))
-    bibtex_from_inspire = get_bibtex_from_inspire(inspire_key, reference_id)
+    bibtex_from_inspire = post_process(get_bibtex_from_inspire(inspire_key, reference_id))
     references_written.append(reference)
     output_file_handle.write(bibtex_from_inspire)
 
