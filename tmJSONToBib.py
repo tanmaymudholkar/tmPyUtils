@@ -46,10 +46,13 @@ if not(inputArguments.bib_header_source == "/dev/null"):
     with open(inputArguments.bib_header_source, 'r') as bib_header_source_handle:
         output_file_handle.write(bib_header_source_handle.read())
 
-# Step 2: Get BibTEX source for each input
+# Step 3: Get BibTEX source for each input
 references_from_json_input = json_input_data["references"]
 print("Found {n} references.".format(n=len(references_from_json_input)))
+references_written = []
 for reference in references_from_json_input:
+    if (reference in references_written):
+        sys.exit("ERROR: duplicate reference: {r}".format(r=reference))
     reference_string_split = reference.split(":")
     inspire_key = None
     try:
@@ -59,6 +62,7 @@ for reference in references_from_json_input:
     reference_id = ''.join(reference_string_split[1:])
     print("Getting inspire_key: {i}, reference_id: {ident}".format(i=inspire_key, ident=reference_id))
     bibtex_from_inspire = get_bibtex_from_inspire(inspire_key, reference_id)
+    references_written.append(reference)
     output_file_handle.write(bibtex_from_inspire)
 
 output_file_handle.close()
