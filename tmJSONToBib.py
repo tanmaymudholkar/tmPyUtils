@@ -2,7 +2,7 @@
 
 from __future__ import print_function, division
 
-import json, requests, argparse, sys, enum, re
+import json, requests, argparse, sys, enum, re, time
 
 inputArgumentsParser = argparse.ArgumentParser(description="Convert JSON input with doi/arxiv IDs to a CMS-compabible bib file.")
 inputArgumentsParser.add_argument("--json_input", required=True, help="Path to input JSON.", type=str)
@@ -37,6 +37,7 @@ def get_inspire_restapi_format_query(inspire_key: AllowedKeys, reference_id: str
 def get_bibtex_from_inspire(inspire_key: AllowedKeys, reference_id: str) -> str:
     inspire_restapi_format_query = get_inspire_restapi_format_query(inspire_key, reference_id)
     response = requests.get(inspire_restapi_format_query)
+    time.sleep(1.0) # API imposes rate limit of 2 per second, this is to keep the rate well below that limit
     if not(response.status_code == 200): # HTTP OK, got back everything we asked for
         sys.exit("Query failed. Are you sure this record exists? Query: {q}".format(q=inspire_restapi_format_query))
     return response.text
