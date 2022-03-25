@@ -138,7 +138,7 @@ class tmCombineDataCardInterface:
                     rateParamsLineCopy2 += tmGeneralUtils.alignFixedWidthStringLeft(width=rateParamProcessesColumnWidth, inputString=paramProcessLabel)
                     rateParamsLineCopy2 += tmGeneralUtils.alignFixedWidthFloatLeft(width=rateParamProcessesColumnWidth, precision=3, number=paramProperties[2])
                     if (len(paramProperties) == 5):
-                        rateParamsLineCopy2 += tmGeneralUtils.alignFixedWidthStringLeft(width=2*rateParamProcessesColumnWidth, inputString="[{min:.3f},{max:.3f}]".format(min=paramProperties[3], max=paramProperties[4]))
+                        rateParamsLineCopy2 += tmGeneralUtils.alignFixedWidthStringLeft(width=2*rateParamProcessesColumnWidth, inputString="[{minimum:.3f},{maximum:.3f}]".format(minimum=paramProperties[3], maximum=paramProperties[4]))
                         # rateParamsLineCopy2 += tmGeneralUtils.alignFixedWidthFloatLeft(width=rateParamProcessesColumnWidth, precision=3, number=paramProperties[3]) # min value
                         # rateParamsLineCopy2 += tmGeneralUtils.alignFixedWidthFloatLeft(width=rateParamProcessesColumnWidth, precision=3, number=paramProperties[4]) # max value
                     yield(rateParamsLineCopy2)
@@ -160,7 +160,7 @@ class tmCombineDataCardInterface:
                             except KeyError:
                                 sys.exit("ERROR: systematics[systematicsLabel][signalBinLabel][processLabel] is a dict but does not have elements named \"Up\" or \"Down\". dict contents: {c}".format(c=systematics[systematicsLabel][signalBinLabel][processLabel]))
                         else:
-                            systematicsLine += tmGeneralUtils.alignFixedWidthFloatLeft(width=signalLabelWidth, precision=3, number=self.systematics[systematicsLabel][signalBinLabel][processLabel])
+                            systematicsLine += tmGeneralUtils.alignFixedWidthFloatLeft(width=signalLabelWidth, precision=5, number=self.systematics[systematicsLabel][signalBinLabel][processLabel])
                     except KeyError:
                         systematicsLine += tmGeneralUtils.alignFixedWidthStringLeft(width=signalLabelWidth, inputString="-")
             yield(systematicsLine)
