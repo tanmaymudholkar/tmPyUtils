@@ -76,6 +76,7 @@ class tmJDLInterface:
                 transferString += "{f},".format(f=fileToTransfer)
             transferString = transferString[:-1] # To remove the "," at the end
             outputJDL.write("{tS}\n".format(tS=transferString))
+        outputJDL.write("transfer_output_files = \"\"\n") # To prevent tons of useless files being copied back into the workarea
         outputJDL.write("output = log_{pN}.stdout\n".format(pN=self.processName_))
         outputJDL.write("error = log_{pN}.stderr\n".format(pN=self.processName_))
         outputJDL.write("log = log_{pN}.log\n".format(pN=self.processName_))
