@@ -47,11 +47,14 @@ def post_process(response_text: str) -> str:
     for response_line_uncorrected in response_text.splitlines():
         if not(response_line_uncorrected == ""):
             response_line = response_line_uncorrected
+            # ignore all "number" fields
+            if (re.search(r'[nN][uU][mM][bB][eE][rR] *=', response_line)):
+                continue
             # if "pages" field has a page range, use only the first page (CMS guideline)
-            if (re.search(r'[pP][aA][gG][eE][sS] *= ', response_line)):
+            if (re.search(r'[pP][aA][gG][eE][sS] *=', response_line)):
                 response_line = re.sub(r'([0-9]*)-{1,2}[0-9]*', r'\1', response_line)
             # surround special characters in the "author" field with curly braces
-            if (re.search(r'[aA][uU][tT][hH][oO][rR] *= ', response_line)):
+            if (re.search(r'[aA][uU][tT][hH][oO][rR] *=', response_line)):
                 special_character_signatures = (r'`' + r"'" + r'\^"H~oclrv=')
                 response_line = re.sub((r'\\([' + special_character_signatures + '])([a-zA-Z])'), (r'{\\\1\2}'), response_line)
             output_text += (response_line + "\n")
