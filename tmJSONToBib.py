@@ -49,7 +49,9 @@ def post_process(response_text: str) -> str:
             response_line = response_line_uncorrected
             # ignore all "number" fields
             if (re.search(r'[nN][uU][mM][bB][eE][rR] *=', response_line)):
-                continue
+                # but not "reportNumber" fields
+                if not(re.search(r'[rR][eE][pP][oO][rR][tT][nN][uU][mM][bB][eE][rR] *=', response_line)):
+                    continue
             # if "pages" field has a page range, use only the first page (CMS guideline)
             if (re.search(r'[pP][aA][gG][eE][sS] *=', response_line)):
                 response_line = re.sub(r'([0-9]*)-{1,2}[0-9]*', r'\1', response_line)
