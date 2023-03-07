@@ -59,6 +59,7 @@ def post_process(response_text: str) -> str:
             if (re.search(r'[aA][uU][tT][hH][oO][rR] *=', response_line)):
                 special_character_signatures = (r'`' + r"'" + r'\^"H~oclrv=')
                 response_line = re.sub((r'\\([' + special_character_signatures + '])([a-zA-Z])'), (r'{\\\1\2}'), response_line)
+                response_line = response_line.replace("Collaboration, The Cms and others", "{CMS Collaboration}")
             output_text += (response_line + "\n")
     return output_text
 
