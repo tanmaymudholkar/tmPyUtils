@@ -3,7 +3,17 @@ from __future__ import print_function, division
 import os, sys, tmGeneralUtils
 
 class tmCombineDataCardInterface:
-    def __init__(self, list_signalBinLabels, list_backgroundProcessLabels, list_signalProcessLabels, list_systematicsLabels, dict_observedNEvents, dict_expectedNEvents, list_rateParamLabels, dict_rateParamProperties, dict_systematicsTypes, dict_systematics):
+    def __init__(self,
+                 list_signalBinLabels,
+                 list_backgroundProcessLabels,
+                 list_signalProcessLabels,
+                 list_systematicsLabels,
+                 dict_observedNEvents,
+                 dict_expectedNEvents,
+                 list_rateParamLabels,
+                 dict_rateParamProperties,
+                 dict_systematicsTypes,
+                 dict_systematics):
         self.nChannels = len(list_signalBinLabels) # Number of observables
         self.nBackgrounds = len(list_backgroundProcessLabels) # Number of background processes (each one may lead to a different nEvents in each channel)
         self.nSignals = len(list_signalProcessLabels)
